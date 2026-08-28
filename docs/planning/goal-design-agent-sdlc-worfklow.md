@@ -18,8 +18,8 @@ Start with [Matt Pocock's skills](https://github.com/mattpocock/skills) and SDLC
 Adapt and improve that baseline SDLC with ET's skills: [ASU/ddt-agent-skills-library](https://github.com/ASU/ddt-agent-skills-library)
 
 - `/adversarial-code-review`
-- `pr-review`
-- `security-review`
+- `/pr-review`
+- `/security-review`
 
 ## Goals:
 
