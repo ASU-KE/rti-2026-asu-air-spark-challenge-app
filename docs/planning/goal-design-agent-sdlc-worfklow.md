@@ -6,6 +6,8 @@ status: draft
 
 # Goal: Design an Enteprise-ready agent Software Development Lifecycle (aSDLC)
 
+The primary goal for this project is to test an agent-centric software development lifecyle (aSDLC) that can hold up to the demands and quality requirements for RTO mission-critical applications.
+
 Start with [Matt Pocock's skills](https://github.com/mattpocock/skills) and SDLC:
 
 - `/grill-with-docs`
