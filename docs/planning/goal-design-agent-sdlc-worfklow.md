@@ -8,18 +8,20 @@ status: draft
 
 The primary goal for this project is to test an agent-centric software development lifecyle (aSDLC) that can hold up to the demands and quality requirements for RTO mission-critical applications.
 
-Start with [Matt Pocock's skills](https://github.com/mattpocock/skills) and SDLC:
+I am inspired by the SDLC workflow that Matt Pocock demonstrates with his skills library (https://github.com/mattpocock/skills) (also located in this project in `/.kiro/skills`):
 
 - `/grill-with-docs`
 - `/to-spec`
 - `/to-tickets` with `/tdd`
 - `/code-review`
 
-Adapt and improve that baseline SDLC with ET's skills: [ASU/ddt-agent-skills-library](https://github.com/ASU/ddt-agent-skills-library)
+We intend to adapt and improve that baseline SDLC using ASU ENterprise Technology's (ET) skills: [ASU/ddt-agent-skills-library](https://github.com/ASU/ddt-agent-skills-library). Also located in `.kiro/skills`.
 
 - `/adversarial-code-review`
 - `/pr-review`
 - `/security-review`
+
+A far more refined and advanced agent harness that we have just encountered is [aafan-m/ECC](https://github.com/affaan-m/ECC). ECC demonstrates a mature agent harness framework that exemplifies the robust SDLC I hope to demonstrate in time. It may be too much to adapt prior to the hackathon, but we are reviewing it for insights that we may test in this project.
 
 ## Goals:
 
