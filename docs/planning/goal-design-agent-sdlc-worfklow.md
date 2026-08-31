@@ -1,12 +1,15 @@
 ---
 author: Nathan Rollins
 date-created: 2026-08-26
-status: draft
+status: superseded
+superseded-by: docs/asdlc/workflow.md
 ---
 
-# Goal: Design an Enteprise-ready agent Software Development Lifecycle (aSDLC)
+# Goal: Explore an Enterprise-Informed Agent Software Development Lifecycle (aSDLC)
 
-The primary goal for this project is to test an agent-centric software development lifecyle (aSDLC) that can hold up to the demands and quality requirements for RTO mission-critical applications.
+> Historical planning input. The accepted terminology, scope, and workflow are defined in `CONTEXT.md`, the accepted ADRs, and `docs/asdlc/workflow.md`.
+
+The primary goal for this project is to test an agent-centric software development lifecycle (aSDLC) that can hold up to the demands and quality requirements for RTO mission-critical applications.
 
 Start with [Matt Pocock's skills](https://github.com/mattpocock/skills) and SDLC:
 
@@ -33,8 +36,8 @@ Adapt and improve that baseline SDLC with ET's skills: [ASU/ddt-agent-skills-lib
 - Work items/tickets queue must support multiple developers & agents
   - How do we manage task assignment/claims, avoid work collisions
   - Coordinate work item dependencies across dev/agent partnerships
-- Developer-Agent model: Pair Programming Partnership (define PPP)
-  - Document possible Agent-Dev PPP framework
+- Human-Agent Pair Programming model
+  - Document a possible Human-Agent Pair Programming framework
 
 ## Work breakdown into Feature-based Slices
 
