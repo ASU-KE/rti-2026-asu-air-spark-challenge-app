@@ -13,6 +13,13 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Project board
+
+Work tickets are tracked on the **AIRgents of Change — Development** GitHub Project.
+Field/label taxonomy, views, and the `/to-tickets` handoff routine live in
+`project-board.md`. Planning/brainstorm issues stay in the separate Planning project and
+must not be modified.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.**
