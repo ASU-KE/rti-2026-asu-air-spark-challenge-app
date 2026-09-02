@@ -15,7 +15,7 @@ This skill goes deeper than the security section in pr-review. Use it when:
 ## Before Asking the User
 
 Search for answers in official documentation first:
-- AWS IAM docs for policy evaluation logic
+- Google IAM docs for policy evaluation logic
 - Terraform provider docs for resource behavior
 - Repo's existing IAM patterns for established conventions
 - AWS security best practices for the relevant service
