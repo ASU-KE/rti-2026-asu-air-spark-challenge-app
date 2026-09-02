@@ -1,62 +1,30 @@
 ---
 inclusion: auto
 name: performance
-description: Performance optimization guidelines including model selection strategy, context window management, and build troubleshooting
+description: Agent performance guidance — model selection, context budget, and build troubleshooting. Use when picking a model tier, planning a large refactor, or when a build fails.
 ---
 
 # Performance Optimization
 
-## Model Selection Strategy
+## Model Selection
 
-**Claude Haiku 4.5** (90% of Sonnet capability, 3x cost savings):
+Match model strength to the task rather than defaulting to one model:
 
-- Lightweight agents with frequent invocation
-- Pair programming and code generation
-- Worker agents in multi-agent systems
+- **Fast, low-cost model** — high-frequency worker tasks: code generation, pair programming, and worker agents in a multi-agent run.
+- **Strongest available model** — architecture decisions, cross-file refactors, and tasks needing the deepest reasoning.
 
-**Claude Sonnet 4.6** (Best coding model):
+Choose the tier by task and let the harness resolve the concrete model, so this guidance does not go stale against a version.
 
-- Main development work
-- Orchestrating multi-agent workflows
-- Complex coding tasks
+## Context Budget
 
-**Claude Opus 4.8** (Deepest reasoning):
-
-- Complex architectural decisions
-- Maximum reasoning requirements
-- Research and analysis tasks
-
-## Context Window Management
-
-Avoid last 20% of context window for:
+Avoid the last 20% of the context window for:
 
 - Large-scale refactoring
-- Feature implementation spanning multiple files
+- Feature work spanning multiple files
 - Debugging complex interactions
 
-Lower context sensitivity tasks:
-
-- Single-file edits
-- Independent utility creation
-- Documentation updates
-- Simple bug fixes
-
-## Extended Thinking
-
-Extended thinking is enabled by default in Kiro, reserving tokens for internal reasoning.
-
-For complex tasks requiring deep reasoning:
-
-1. Ensure extended thinking is enabled
-2. Use structured approach for planning
-3. Use multiple critique rounds for thorough analysis
-4. Use sub-agents for diverse perspectives
+Single-file edits, independent utilities, documentation, and simple bug fixes tolerate higher utilization.
 
 ## Build Troubleshooting
 
-If build fails:
-
-1. Use build-error-resolver agent
-2. Analyze error messages
-3. Fix incrementally
-4. Verify after each fix
+When a build fails, use the **build-error-resolver** agent: read the error messages, fix incrementally, and verify after each fix.
