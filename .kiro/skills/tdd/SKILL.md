@@ -9,6 +9,8 @@ TDD is the red → green loop. This skill is the reference that makes that loop 
 
 When exploring the codebase, read `CONTEXT.md` (if it exists) so test names and interface vocabulary match the project's domain language, and respect ADRs in the area you're touching.
 
+Resolve the test runner before the first cycle instead of assuming `npm test`: read `package.json` scripts and the test files, then reuse the same command every cycle. One trap that no config confesses — with Bun, `bun test` (the built-in runner) is not `bun run test` (the `package.json` script), and picking the wrong one breaks the suite.
+
 ## What a good test is
 
 Tests verify behavior through public interfaces, not implementation details. Code can change entirely; tests shouldn't. A good test reads like a specification: "user can checkout with valid cart" tells you exactly what capability exists, and it survives refactors because it doesn't care about internal structure.
@@ -20,6 +22,8 @@ See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking g
 A **seam** is the public boundary you test at: the interface where you observe behavior without reaching inside. Tests live at seams, never against internals.
 
 **Test only at pre-agreed seams.** Before writing any test, write down the seams under test and confirm them with the user. No test is written at an unconfirmed seam. You can't test everything, so agreeing the seams up front is how testing effort lands on the critical paths and complex logic instead of every edge case.
+
+Within a confirmed seam, cover the error and boundary paths, not just the happy one — empty inputs, invalid values, and failure modes are where behavior actually breaks. The project's coverage bar lives in the `testing` steering; treat it as a floor across the confirmed seams, not a mandate to test every internal.
 
 Ask: "What's the public interface, and which seams should we test?"
 
@@ -34,5 +38,7 @@ When the shape of that interface is itself in question (how deep the module is, 
 ## Rules of the loop
 
 - **Red before green.** Write the failing test first, then only enough code to pass it. Don't anticipate future tests or add speculative features.
+- **The red must be real.** Run the test and watch it fail before you touch production code; a test that was written but never run is not red. The failure must come from the behavior under test — the missing implementation or the bug you're reproducing — not from an unrelated syntax error, broken setup, or missing dependency. Two paths count: _runtime red_, where the test compiles, runs, and fails on its assertion; and _compile-time red_, where a new test references code that doesn't exist yet and the compile failure is itself the signal. Either way, confirm the cause is the intended gap before going green.
 - **One slice at a time.** One seam, one test, one minimal implementation per cycle.
+- **Checkpoint each state.** In a Git repo, commit at each stable point of the loop: the failing test once red is confirmed (`test: …`), the minimal implementation once green (`feat:` / `fix: …`), and the refactor if you do one (`refactor: …`). Each commit records what was verified, so the red → green proof survives a later squash.
 - **Refactoring is not part of the loop.** It belongs to the review stage (see the `code-review` skill), not the red → green implementation cycle.

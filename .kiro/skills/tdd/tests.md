@@ -21,6 +21,22 @@ Characteristics:
 - Survives internal refactors
 - Describes WHAT, not HOW
 - One logical assertion per test
+- Independent — sets up its own data and relies on no other test or execution order
+
+**Isolation**: each test builds the state it needs, so it passes alone and in any order.
+
+```typescript
+// BAD: the second test depends on the first having run
+test("creates user", () => { createUser({ name: "Alice" }); });
+test("updates user", () => { updateUser("Alice", { name: "Bob" }); });
+
+// GOOD: each test owns its setup
+test("updates user", async () => {
+  const user = await createUser({ name: "Alice" });
+  const updated = await updateUser(user.id, { name: "Bob" });
+  expect(updated.name).toBe("Bob");
+});
+```
 
 ## Bad Tests
 
