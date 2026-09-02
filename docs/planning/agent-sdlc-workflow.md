@@ -6,7 +6,7 @@ status: draft
 
 # Goal: Design an Enteprise-ready agent Software Development Lifecycle (aSDLC)
 
-The primary goal for this project is to test an agent-centric software development lifecyle (aSDLC) that can hold up to the demands and quality requirements for RTO mission-critical applications.
+The secondary goal for this project is to test an agent-centric software development lifecyle (aSDLC) that can hold up to the demands and quality requirements for RTO mission-critical applications.
 
 I am inspired by the SDLC workflow that Matt Pocock demonstrates with his skills library (https://github.com/mattpocock/skills) (also located in this project in `/.kiro/skills`):
 
@@ -15,13 +15,13 @@ I am inspired by the SDLC workflow that Matt Pocock demonstrates with his skills
 - `/to-tickets` with `/tdd`
 - `/code-review`
 
-We intend to adapt and improve that baseline SDLC using ASU ENterprise Technology's (ET) skills: [ASU/ddt-agent-skills-library](https://github.com/ASU/ddt-agent-skills-library). Also located in `.kiro/skills`.
+We intend to adapt and improve that baseline SDLC using ASU Enterprise Technology's (ET) skills: [ASU/ddt-agent-skills-library](https://github.com/ASU/ddt-agent-skills-library). Also located in `.kiro/skills`.
 
 - `/adversarial-code-review`
 - `/pr-review`
 - `/security-review`
 
-A far more refined and advanced agent harness that we have just encountered is [aafan-m/ECC](https://github.com/affaan-m/ECC). ECC demonstrates a mature agent harness framework that exemplifies the robust SDLC I hope to demonstrate in time. It may be too much to adapt prior to the hackathon, but we are reviewing it for insights that we may test in this project.
+A far more refined and advanced agent harness that we have encountered is [aafan-m/ECC](https://github.com/affaan-m/ECC). ECC demonstrates a mature agent harness framework that exemplifies the robust SDLC I hope to imlement for RTO. Key agents, skills, and steering files have been added to `.kiro/`.
 
 ## Goals:
 
