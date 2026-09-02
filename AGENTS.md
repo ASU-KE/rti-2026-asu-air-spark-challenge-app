@@ -3,7 +3,7 @@
 ## Core Principles
 
 1. **Agent-First** — Delegate to specialized agents for domain tasks
-2. **Test-Driven** — Write tests before implementation, 80%+ coverage required
+2. **Test-Driven** — Write tests before implementation; cover confirmed seams qualitatively, not to a percentage
 3. **Security-First** — Never compromise on security; validate all inputs
 4. **Immutability** — Always create new objects, never mutate existing ones
 5. **Plan Before Execute** — Plan complex features before writing code
@@ -33,7 +33,7 @@ This repository uses a single-context domain documentation layout. See `docs/age
 | e2e-runner           | End-to-end Playwright testing     | Critical user flows               |
 | doc-updater          | Documentation and codemaps        | Updating docs                     |
 | docs-lookup          | Documentation lookup via Context7 | API/docs questions                |
-| database-reviewer    | PostgreSQL/Supabase specialist    | Schema design, query optimization |
+| database-reviewer    | PostgreSQL specialist             | Schema design, query optimization |
 | python-reviewer      | Python code review                | Python projects                   |
 | typescript-reviewer  | TypeScript/JavaScript code review | TypeScript/JavaScript projects    |
 
@@ -85,21 +85,17 @@ Use parallel execution for independent operations — launch multiple agents sim
 
 ## Testing Requirements
 
-**Minimum coverage: 80%**
+**Coverage bar:** Judged qualitatively at confirmed seams, not as a percentage. Across every confirmed seam, exercise the happy path, error and failure modes, and boundary conditions. See the `testing` steering and the `tdd` skill.
 
-Test types (all required):
+Test types, selected by feature risk:
 
-1. **Unit tests** — Individual functions, utilities, components
-2. **Integration tests** — API endpoints, database operations
-3. **E2E tests** — Critical user flows
+1. **Unit** — functions, utilities, components (`pytest`; React Testing Library)
+2. **Integration / contract** — FastAPI endpoints, database access, backend↔frontend contracts (`pytest`)
+3. **E2E** — critical user journeys (Playwright)
 
-**TDD workflow (mandatory):**
+**TDD loop (mandatory):** Write the failing test first (RED), implement to pass it (GREEN), then refactor. See the `tdd` skill.
 
-1. Write test first (RED) — test should FAIL
-2. Write minimal implementation (GREEN) — test should PASS
-3. Refactor (IMPROVE) — verify coverage 80%+
-
-Troubleshoot failures: check test isolation → verify mocks → fix implementation (not tests, unless tests are wrong).
+Troubleshoot failures: check test isolation → verify mocks → fix implementation (change a test only when it encodes the wrong behavior).
 
 ## Development Workflow
 
@@ -149,7 +145,7 @@ steering/        — Steering rules
 
 ## Success Metrics
 
-- All tests pass with 80%+ coverage
+- All tests pass; every confirmed seam is covered
 - No security vulnerabilities
 - Code is readable and maintainable
 - Performance is acceptable
