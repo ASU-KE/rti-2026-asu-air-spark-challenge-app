@@ -1,22 +1,11 @@
 ---
 name: api-design
-description: REST API design patterns including resource naming, status codes, pagination, filtering, error responses, versioning, and rate limiting for production APIs. Use when designing or reviewing REST endpoints, resource names, status codes, pagination, or versioning.
+description: REST API design patterns for production APIs — resource naming, HTTP status codes, response envelopes, pagination, filtering, error responses, authentication, rate limiting, and versioning. Use when designing or reviewing REST endpoints.
 metadata:
   origin: ECC
 ---
 
 # API Design Patterns
-
-Conventions and best practices for designing consistent, developer-friendly REST APIs.
-
-## When to Activate
-
-- Designing new API endpoints
-- Reviewing existing API contracts
-- Adding pagination, filtering, or sorting
-- Implementing error handling for APIs
-- Planning API versioning strategy
-- Building public or partner-facing APIs
 
 ## Resource Design
 
@@ -309,21 +298,31 @@ X-API-Key: sk_live_abc123
 
 ### Authorization Patterns
 
-```typescript
-// Resource-level: check ownership
-app.get("/api/v1/orders/:id", async (req, res) => {
-  const order = await Order.findById(req.params.id);
-  if (!order) return res.status(404).json({ error: { code: "not_found" } });
-  if (order.userId !== req.user.id)
-    return res.status(403).json({ error: { code: "forbidden" } });
-  return res.json({ data: order });
-});
+```python
+from fastapi import APIRouter, Depends, HTTPException, status
 
-// Role-based: check permissions
-app.delete("/api/v1/users/:id", requireRole("admin"), async (req, res) => {
-  await User.delete(req.params.id);
-  return res.status(204).send();
-});
+router = APIRouter(prefix="/api/v1")
+
+
+# Resource-level: check ownership
+@router.get("/orders/{order_id}")
+async def get_order(order_id: str, user: User = Depends(current_user)):
+    order = await orders.find_by_id(order_id)
+    if order is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not_found")
+    if order.user_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "forbidden")
+    return {"data": order}
+
+
+# Role-based: check permissions with a reusable dependency
+@router.delete(
+    "/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_role("admin"))],
+)
+async def delete_user(user_id: str):
+    await users.delete(user_id)
 ```
 
 ## Rate Limiting
@@ -400,124 +399,16 @@ Accept: application/vnd.myapp.v2+json
 
 ## Implementation Patterns
 
-### TypeScript (Next.js API Route)
-
-```typescript
-import { z } from "zod";
-import { NextRequest, NextResponse } from "next/server";
-
-const createUserSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(100),
-});
-
-export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const parsed = createUserSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: {
-          code: "validation_error",
-          message: "Request validation failed",
-          details: parsed.error.issues.map((i) => ({
-            field: i.path.join("."),
-            message: i.message,
-            code: i.code,
-          })),
-        },
-      },
-      { status: 422 },
-    );
-  }
-
-  const user = await createUser(parsed.data);
-
-  return NextResponse.json(
-    { data: user },
-    {
-      status: 201,
-      headers: { Location: `/api/v1/users/${user.id}` },
-    },
-  );
-}
-```
-
-### Python (Django REST Framework)
-
-```python
-from rest_framework import serializers, viewsets, status
-from rest_framework.response import Response
-
-class CreateUserSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    name = serializers.CharField(max_length=100)
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ["id", "email", "name", "created_at"]
-
-class UserViewSet(viewsets.ModelViewSet):
-    serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_serializer_class(self):
-        if self.action == "create":
-            return CreateUserSerializer
-        return UserSerializer
-
-    def create(self, request):
-        serializer = CreateUserSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = UserService.create(**serializer.validated_data)
-        return Response(
-            {"data": UserSerializer(user).data},
-            status=status.HTTP_201_CREATED,
-            headers={"Location": f"/api/v1/users/{user.id}"},
-        )
-```
-
-### Go (net/http)
-
-```go
-func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
-    var req CreateUserRequest
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        writeError(w, http.StatusBadRequest, "invalid_json", "Invalid request body")
-        return
-    }
-
-    if err := req.Validate(); err != nil {
-        writeError(w, http.StatusUnprocessableEntity, "validation_error", err.Error())
-        return
-    }
-
-    user, err := h.service.Create(r.Context(), req)
-    if err != nil {
-        switch {
-        case errors.Is(err, domain.ErrEmailTaken):
-            writeError(w, http.StatusConflict, "email_taken", "Email already registered")
-        default:
-            writeError(w, http.StatusInternalServerError, "internal_error", "Internal error")
-        }
-        return
-    }
-
-    w.Header().Set("Location", fmt.Sprintf("/api/v1/users/%s", user.ID))
-    writeJSON(w, http.StatusCreated, map[string]any{"data": user})
-}
-```
+Stack handlers implementing these conventions live in [`IMPLEMENTATION.md`](IMPLEMENTATION.md): Python/FastAPI (Pydantic v2) for the server and a TypeScript React API client for the frontend — reach for the block matching your side of the stack.
 
 ## API Design Checklist
 
-Before shipping a new endpoint:
+Before shipping a new endpoint, confirm every item below holds (or is explicitly marked not-applicable):
 
 - [ ] Resource URL follows naming conventions (plural, kebab-case, no verbs)
 - [ ] Correct HTTP method used (GET for reads, POST for creates, etc.)
 - [ ] Appropriate status codes returned (not 200 for everything)
-- [ ] Input validated with schema (Zod, Pydantic, Bean Validation)
+- [ ] Input validated with schema (Pydantic v2 server-side, Zod client-side)
 - [ ] Error responses follow standard format with codes and messages
 - [ ] Pagination implemented for list endpoints (cursor or offset)
 - [ ] Authentication required (or explicitly marked as public)

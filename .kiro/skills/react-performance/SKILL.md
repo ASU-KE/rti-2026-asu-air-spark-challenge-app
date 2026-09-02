@@ -1,23 +1,13 @@
 ---
 name: react-performance
-description: React and Next.js performance optimization patterns adapted from Vercel Engineering's React Best Practices (https://github.com/vercel-labs/agent-skills). Organizes 70+ rules across 8 priority categories — waterfalls, bundle size, server-side, client fetching, re-render, rendering, JS micro-perf, advanced. Use when writing, reviewing, or refactoring React/Next.js code for performance.
+description: React and Next.js performance optimization — a priority-ranked rule catalog adapted from Vercel Labs react-best-practices (https://github.com/vercel-labs/agent-skills, MIT). Use when writing, reviewing, or refactoring React/Next.js code for speed, bundle size, or Core Web Vitals.
 metadata:
   origin: ECC
 ---
 
 # React Performance
 
-Performance optimization patterns for React 18/19 and Next.js, adapted from [Vercel Labs `react-best-practices`](https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices) (MIT, v1.0.0). This skill organizes rules by priority and provides decision-tree guidance for active code review and refactoring.
-
-## When to Activate
-
-- Writing or reviewing React/Next.js code for performance
-- Diagnosing slow page loads, slow interactions, or high CPU on the client
-- Auditing bundle size or Lighthouse Core Web Vitals regressions
-- Removing waterfalls in Server Components / API routes
-- Reducing client-side re-renders
-- Optimizing long lists, animations, or hydration
-- Auditing optimization choices in PRs touching `app/`, `pages/`, `components/`, or data layers
+A priority-ranked catalog for React 18/19 and Next.js, with decision-tree guidance for active review and refactoring. Work top-down: the higher a category, the larger its typical win. When reviewing, apply every rule in a category before dropping to the next — the pass is done once every category from Waterfalls through Advanced Patterns has been checked against the diff.
 
 ## Priority Index
 
@@ -31,6 +21,8 @@ Performance optimization patterns for React 18/19 and Next.js, adapted from [Ver
 | 6 — MEDIUM | Rendering Performance | `rendering-` | Long lists, animations, hydration |
 | 7 — LOW-MEDIUM | JavaScript Performance | `js-` | Hot loops, frequent allocations |
 | 8 — LOW | Advanced Patterns | `advanced-` | Effect-event integration, stable refs |
+
+Categories 7 and 8 are disclosed to [`JS-AND-ADVANCED.md`](JS-AND-ADVANCED.md) — reach for them only after 1–6 are clean and profiling still shows a JS-bound or hook-stability bottleneck.
 
 ## 1. Eliminating Waterfalls (CRITICAL)
 
@@ -128,9 +120,9 @@ export default async function Page() {
 
 ## 2. Bundle Size Optimization (CRITICAL)
 
-### Direct imports, not barrels
+### Direct imports over barrels
 
-Barrel `index.ts` files force the bundler to walk the entire module graph even when tree-shaking removes most of it. Direct imports save 200-800ms of first-load JS in many real-world apps.
+Import from the module directly. Barrel `index.ts` files force the bundler to walk the entire module graph even when tree-shaking removes most of it. Direct imports save 200-800ms of first-load JS in many real-world apps.
 
 ```ts
 // INCORRECT
@@ -232,9 +224,9 @@ export async function Page() {
 }
 ```
 
-### No mutable module-level state in RSC/SSR
+### Keep server state request-scoped
 
-Module state on the server is shared across all requests — a race condition between users. Use request-scoped storage (`headers()`, `cookies()`, async context) instead.
+Store per-request data in request-scoped storage (`headers()`, `cookies()`, async context). Module-level mutable state on the server is shared across all requests — a race condition between users.
 
 ### Minimize data passed to Client Components
 
@@ -296,7 +288,9 @@ Improves scrolling smoothness; the listener cannot `preventDefault()`.
 
 ## 5. Re-render Optimization (MEDIUM)
 
-### Don't subscribe to state used only in callbacks
+### Read callback-only state on call
+
+For state used only inside a callback, read it on call instead of subscribing.
 
 ```tsx
 // INCORRECT — re-renders every time count changes
@@ -375,9 +369,9 @@ const increment = useCallback(() => setCount((c) => c + 1), []);
 const [tree] = useState(() => parseTree(largeInput));
 ```
 
-### Avoid memo for simple primitives
+### Reserve memo for object identity and expensive work
 
-`useMemo(() => x + 1, [x])` is overhead. Memo earns its keep on object identity and expensive computation.
+Memo earns its keep on object identity and expensive computation. `useMemo(() => x + 1, [x])` is pure overhead.
 
 ### Split hooks with independent deps
 
@@ -412,7 +406,9 @@ const results = useMemo(() => expensiveSearch(deferredQuery), [deferredQuery]);
 
 For values that change often but should not trigger re-render (timestamps, last-key, accumulators).
 
-### Don't define components inside components
+### Define components at module scope
+
+Declare every component at the top level so its type identity is stable across renders.
 
 ```tsx
 // INCORRECT — Inner is a new component on every Outer render
@@ -422,7 +418,7 @@ function Outer() {
 }
 ```
 
-Each render makes a new `Inner` type, defeating reconciliation and unmounting children.
+A component defined inside another gets a new type each render, defeating reconciliation and unmounting its children.
 
 ## 6. Rendering Performance (MEDIUM)
 
@@ -493,53 +489,6 @@ preconnect("https://api.example.com");
 
 `defer` for ordered execution after DOMContentLoaded; `async` for fire-and-forget.
 
-## 7. JavaScript Performance (LOW-MEDIUM)
-
-- **Batch DOM/CSS changes** — apply via class swap or `cssText`, not property-by-property
-- **`Map` for repeated lookups** — `O(1)` vs `O(n)` linear scan
-- **Cache property access in loops** — `const len = arr.length`
-- **Memoize pure functions** — module-level `Map<key, result>`
-- **Cache `localStorage` reads** — sync API; one read per render
-- **Combine `filter().map()` into one pass** — `flatMap` or single `for`
-- **Check array length first** before expensive comparisons
-- **Early return** from functions
-- **Hoist RegExp** out of loops — compilation is not free
-- **Loop for min/max** instead of `sort()` — `O(n)` vs `O(n log n)`
-- **`Set`/`Map` for membership** — `O(1)` vs `Array.includes` `O(n)`
-- **`toSorted()` over mutation** when immutability matters
-- **`flatMap` to map and filter in one pass**
-- **`requestIdleCallback`** for non-critical work
-
-## 8. Advanced Patterns (LOW)
-
-### `useEffectEvent` deps
-
-Values from `useEffectEvent` are stable — do NOT add them to effect deps.
-
-### Event handler refs
-
-For stable callbacks passed to memoized children:
-
-```tsx
-const handlerRef = useRef(handler);
-useEffect(() => { handlerRef.current = handler; });
-const stable = useCallback((arg) => handlerRef.current(arg), []);
-```
-
-### Init once per app load
-
-For module-level singletons (telemetry, logger), guard with a module-scope flag — not `useEffect`.
-
-### `useLatest` for stable callback refs
-
-```tsx
-function useLatest<T>(value: T) {
-  const ref = useRef(value);
-  ref.current = value;
-  return ref;
-}
-```
-
 ## Automated Tools
 
 Many of these rules are now automated:
@@ -563,13 +512,10 @@ When the project ships React Compiler, demote `rerender-*` manual memoization ru
 
 ## Related
 
-- Skills: [react-patterns](../react-patterns/SKILL.md), [react-testing](../react-testing/SKILL.md), [frontend-patterns](../frontend-patterns/SKILL.md), [accessibility](../accessibility/SKILL.md), [nextjs-turbopack](../nextjs-turbopack/SKILL.md)
-- Rules: [rules/react/](../../rules/react/)
+- Skills: [react-patterns](../react-patterns/SKILL.md), [react-testing](../react-testing/SKILL.md), [frontend-patterns](../frontend-patterns/SKILL.md), [accessibility](../accessibility/SKILL.md)
 - Agents: `react-reviewer` enforces these rules in code review; `react-build-resolver` handles related build failures
 - Commands: `/react-review`, `/react-build`, `/react-test`
 
 ## Attribution
 
-Adapted from Vercel Labs `react-best-practices` skill (MIT License, copyright Vercel Engineering, v1.0.0 January 2026). Source: [https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices](https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices).
-
-This skill restructures and adapts the original 70-rule catalog into a single navigable reference. For the full original ruleset with extended examples, see the upstream repository.
+Adapted from Vercel Labs `react-best-practices` skill (MIT License, copyright Vercel Engineering, v1.0.0 January 2026). Source: [https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices](https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices). This skill restructures the original 70-rule catalog into a single navigable, priority-ranked reference; for the full original ruleset with extended examples, see the upstream repository.

@@ -1,13 +1,11 @@
 ---
 name: fastapi-patterns
-description: FastAPI best practices covering project structure, Pydantic v2 schemas, dependency injection, async handlers, authentication, authorization, transactional service layers, and testing with httpx and pytest. Use when building or reviewing FastAPI apps — Pydantic schemas, dependencies, async handlers, auth, or tests.
+description: FastAPI patterns — project structure, Pydantic v2 schemas, dependency injection, async handlers, auth, transactional service layers, and httpx/pytest testing. Use when building or reviewing FastAPI apps: endpoints, schemas, dependencies, or tests.
 metadata:
   origin: ECC
 ---
 
 # FastAPI Patterns
-
-Modern, production-grade FastAPI development: project layout, Pydantic v2 schemas, dependency injection, async patterns, auth, transactional service methods, and testing.
 
 ## Project Structure
 
@@ -32,8 +30,6 @@ my_app/
 |-- pyproject.toml
 `-- .env
 ```
-
----
 
 ## App Factory and Lifespan
 
@@ -82,8 +78,6 @@ def create_app() -> FastAPI:
 app = create_app()
 ```
 
----
-
 ## Configuration with pydantic-settings
 
 ```python
@@ -112,8 +106,6 @@ class Settings(BaseSettings):
 
 settings = Settings()
 ```
-
----
 
 ## Pydantic Schemas (v2)
 
@@ -156,8 +148,6 @@ class UserListResponse(BaseModel):
     total: int
     items: list[UserResponse]
 ```
-
----
 
 ## Dependency Injection
 
@@ -221,8 +211,6 @@ DbDep = Annotated[AsyncSession, Depends(get_db)]
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 ActiveUserDep = Annotated[User, Depends(get_current_active_user)]
 ```
-
----
 
 ## Router and Endpoint Design
 
@@ -299,8 +287,6 @@ async def login(
         )
     return {"access_token": token, "token_type": "bearer"}
 ```
-
----
 
 ## Service Layer
 
@@ -388,8 +374,6 @@ class UserService:
 
 > **Note on Database Design:** Application-level unique handling requires an underlying unique database index (e.g., `unique=True` on your SQLAlchemy mapping attributes). Without underlying constraints, application layer error-catching cannot safely prevent concurrent race conditions.
 
----
-
 ## Testing with httpx and pytest
 
 ```python
@@ -467,9 +451,9 @@ async def auth_client(client: AsyncClient, auth_token: str) -> AsyncClient:
     return client
 ```
 
----
-
 ## Anti-Patterns
+
+Keep route handlers thin and database access async. Each pair contrasts the trap with the fix.
 
 ```python
 # Bad: business logic inside route handlers.
@@ -502,13 +486,10 @@ async def list_items(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 ```
 
----
-
 ## Best Practices
 
-- Always declare a typed `response_model` to prevent accidental PII/data leaks and output clean OpenAPI schemas.
-- Consolidate standard middleware dependency injections via type-aliasing: `DbDep = Annotated[AsyncSession, Depends(get_db)]`.
-- Wrap database mutation boundaries gracefully within transactions inside your service layer, catching structural database errors directly.
-- Parse JWT parameters defensively, expecting potential string/integer cast mismatches from modern payload variations.
-- Enforce deterministic sorting (e.g., `.order_by(Model.id)`) on all offset/limit paginated endpoints to avoid data skips.
-- Isolate authorization checks from core authentication dependencies to provide precise REST status signals (`401` vs `403`).
+- Declare a typed `response_model` on every endpoint to prevent accidental PII/data leaks and emit clean OpenAPI schemas.
+- Wrap database mutations in transactions inside the service layer, catching `IntegrityError` at that boundary.
+- Parse JWT claims defensively, expecting string/integer cast mismatches from modern payload variations.
+- Enforce deterministic sorting (e.g., `.order_by(Model.id)`) on every offset/limit paginated endpoint to avoid skipped rows.
+- Isolate authorization checks from authentication dependencies so status signals stay precise (`401` vs `403`).

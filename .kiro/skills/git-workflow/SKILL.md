@@ -1,22 +1,13 @@
 ---
 name: git-workflow
-description: Git workflow patterns including branching strategies, commit conventions, merge vs rebase, conflict resolution, and collaborative development best practices for teams of all sizes. Use when choosing a branching strategy, writing commit conventions, deciding merge versus rebase, or resolving conflicts.
+description: Git version control workflow — branching strategies, commit and PR conventions, merge versus rebase, conflict resolution, branch management, releases. Use when choosing a branching strategy, writing commit or PR conventions, deciding merge versus rebase, resolving conflicts, managing branches, or cutting releases and tags.
 metadata:
   origin: ECC
 ---
 
 # Git Workflow Patterns
 
-Best practices for Git version control, branching strategies, and collaborative development.
-
-## When to Activate
-
-- Setting up Git workflow for a new project
-- Deciding on branching strategy (GitFlow, trunk-based, GitHub flow)
-- Writing commit messages and PR descriptions
-- Resolving merge conflicts
-- Managing releases and version tags
-- Onboarding new team members to Git practices
+For Git configuration, aliases, ignore rules, and hooks, see [`CONFIG-AND-HOOKS.md`](CONFIG-AND-HOOKS.md). For semantic versioning, tags, and changelogs, see [`RELEASES.md`](RELEASES.md).
 
 ## Branching Strategies
 
@@ -116,21 +107,23 @@ main (production releases)
 | `ci` | CI/CD changes | `ci: add PostgreSQL service to test workflow` |
 | `revert` | Revert previous commit | `revert: revert "feat(auth): add OAuth2 login"` |
 
-### Good vs Bad Examples
+### Write a specific subject, and a body that explains why
+
+Imperative mood, no period, max 50 chars in the subject; use the body for the reasoning a diff cannot show.
 
 ```
-# BAD: Vague, no context
-git commit -m "fixed stuff"
-git commit -m "updates"
-git commit -m "WIP"
-
-# GOOD: Clear, specific, explains why
+# GOOD: specific subject, body explains why
 git commit -m "fix(api): retry requests on 503 Service Unavailable
 
 The external API occasionally returns 503 errors during peak hours.
 Added exponential backoff retry logic with max 3 attempts.
 
 Closes #123"
+
+# BAD: vague, no context
+git commit -m "fixed stuff"
+git commit -m "updates"
+git commit -m "WIP"
 ```
 
 ### Commit Message Template
@@ -205,17 +198,7 @@ git rebase origin/main
 git push --force-with-lease origin feature/user-auth
 ```
 
-### When NOT to Rebase
-
-```
-# NEVER rebase branches that:
-- Have been pushed to a shared repository
-- Other people have based work on
-- Are protected branches (main, develop)
-- Are already merged
-
-# Why: Rebase rewrites history, breaking others' work
-```
+Rebase rewrites history, so it breaks work others have based on a branch. Keep it to local, unshared branches. **Guardrail — never rebase a branch that** has been pushed to a shared repository, that others have based work on, that is protected (`main`, `develop`), or that is already merged. For public history, use `git revert` instead.
 
 ## Pull Request Workflow
 
@@ -269,6 +252,8 @@ Closes #123
 ```
 
 ### Code Review Checklist
+
+Work each box; the review is done only when every item below is checked or explicitly marked N/A.
 
 **For Reviewers:**
 
@@ -405,146 +390,6 @@ git stash apply stash@{2}
 git stash drop stash@{0}
 ```
 
-## Release Management
-
-### Semantic Versioning
-
-```
-MAJOR.MINOR.PATCH
-
-MAJOR: Breaking changes
-MINOR: New features, backward compatible
-PATCH: Bug fixes, backward compatible
-
-Examples:
-1.0.0 → 1.0.1 (patch: bug fix)
-1.0.1 → 1.1.0 (minor: new feature)
-1.1.0 → 2.0.0 (major: breaking change)
-```
-
-### Creating Releases
-
-```bash
-# Create annotated tag
-git tag -a v1.2.0 -m "Release v1.2.0
-
-Features:
-- Add user authentication
-- Implement password reset
-
-Fixes:
-- Resolve login redirect issue
-
-Breaking Changes:
-- None"
-
-# Push tag to remote
-git push origin v1.2.0
-
-# List tags
-git tag -l
-
-# Delete tag
-git tag -d v1.2.0
-git push origin --delete v1.2.0
-```
-
-### Changelog Generation
-
-```bash
-# Generate changelog from commits
-git log v1.1.0..v1.2.0 --oneline --no-merges
-
-# Or use conventional-changelog
-npx conventional-changelog -i CHANGELOG.md -s
-```
-
-## Git Configuration
-
-### Essential Configs
-
-```bash
-# User identity
-git config --global user.name "Your Name"
-git config --global user.email "your@email.com"
-
-# Default branch name
-git config --global init.defaultBranch main
-
-# Pull behavior (rebase instead of merge)
-git config --global pull.rebase true
-
-# Push behavior (push current branch only)
-git config --global push.default current
-
-# Auto-correct typos
-git config --global help.autocorrect 1
-
-# Better diff algorithm
-git config --global diff.algorithm histogram
-
-# Color output
-git config --global color.ui auto
-```
-
-### Useful Aliases
-
-```bash
-# Add to ~/.gitconfig
-[alias]
-    co = checkout
-    br = branch
-    ci = commit
-    st = status
-    unstage = reset HEAD --
-    last = log -1 HEAD
-    visual = log --oneline --graph --all
-    amend = commit --amend --no-edit
-    wip = commit -m "WIP"
-    undo = reset --soft HEAD~1
-    contributors = shortlog -sn
-```
-
-### Gitignore Patterns
-
-```gitignore
-# Dependencies
-node_modules/
-vendor/
-
-# Build outputs
-dist/
-build/
-*.o
-*.exe
-
-# Environment files
-.env
-.env.local
-.env.*.local
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Test coverage
-coverage/
-
-# Cache
-.cache/
-*.tsbuildinfo
-```
-
 ## Common Workflows
 
 ### Starting a New Feature
@@ -617,83 +462,6 @@ git commit --amend -m "New message"
 # Add forgotten file to last commit
 git add forgotten-file
 git commit --amend --no-edit
-```
-
-## Git Hooks
-
-### Pre-Commit Hook
-
-```bash
-#!/bin/bash
-# .git/hooks/pre-commit
-
-# Run linting
-npm run lint || exit 1
-
-# Run tests
-npm test || exit 1
-
-# Check for secrets
-if git diff --cached | grep -E '(password|api_key|secret)'; then
-    echo "Possible secret detected. Commit aborted."
-    exit 1
-fi
-```
-
-### Pre-Push Hook
-
-```bash
-#!/bin/bash
-# .git/hooks/pre-push
-
-# Run full test suite
-npm run test:all || exit 1
-
-# Check for console.log statements
-if git diff origin/main | grep -E 'console\.log'; then
-    echo "Remove console.log statements before pushing."
-    exit 1
-fi
-```
-
-## Anti-Patterns
-
-```
-# BAD: Committing directly to main
-git checkout main
-git commit -m "fix bug"
-
-# GOOD: Use feature branches and PRs
-
-# BAD: Committing secrets
-git add .env  # Contains API keys
-
-# GOOD: Add to .gitignore, use environment variables
-
-# BAD: Giant PRs (1000+ lines)
-# GOOD: Break into smaller, focused PRs
-
-# BAD: "Update" commit messages
-git commit -m "update"
-git commit -m "fix"
-
-# GOOD: Descriptive messages
-git commit -m "fix(auth): resolve redirect loop after login"
-
-# BAD: Rewriting public history
-git push --force origin main
-
-# GOOD: Use revert for public branches
-git revert HEAD
-
-# BAD: Long-lived feature branches (weeks/months)
-# GOOD: Keep branches short (days), rebase frequently
-
-# BAD: Committing generated files
-git add dist/
-git add node_modules/
-
-# GOOD: Add to .gitignore
 ```
 
 ## Quick Reference

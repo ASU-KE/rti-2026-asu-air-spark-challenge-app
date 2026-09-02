@@ -1,39 +1,21 @@
 ---
 name: react-testing
-description: React component testing with React Testing Library, Vitest/Jest, MSW for network mocking, accessibility assertions with axe, and the decision boundary between component tests and Playwright/Cypress end-to-end runs. Use when writing or fixing tests for React components, hooks, or pages.
+description: Test React components and hooks with React Testing Library — behavior-focused queries, userEvent, MSW network mocking, axe accessibility assertions, and the component-test-versus-Playwright/E2E boundary. Use when writing or fixing tests for React components, hooks, or pages, setting up Vitest or Jest, or migrating off Enzyme.
 metadata:
   origin: ECC
 ---
 
 # React Testing
 
-Comprehensive React testing patterns for behavior-focused component tests, custom hook tests, accessibility assertions, and network-level mocking.
-
-## When to Activate
-
-- Writing tests for React components, custom hooks, or pages
-- Adding test coverage to legacy untested components
-- Migrating from Enzyme or class-component-era patterns to React Testing Library
-- Setting up Vitest or Jest for a new React project
-- Mocking HTTP requests in tests
-- Asserting accessibility violations
-- Deciding which tests belong in RTL vs Playwright Component Testing vs full E2E
-
 ## Core Principle
 
-Test what the user sees and does, not implementation details.
+Test what the user sees and does, not implementation details. A good component test:
 
-A test should:
+- Renders the component with the same providers it has in production
+- Interacts via accessible queries (role, label) and `userEvent`
+- Asserts visible output and observable side effects (callback fired, request sent)
 
-- Render the component with the same providers it has in production
-- Interact with it via accessible queries (role, label) and `userEvent`
-- Assert visible output and observable side effects (callback fired, request sent)
-
-A test should NOT:
-
-- Inspect component state, props passed to children, or which hooks were called
-- Mock React itself or framework hooks
-- Assert on the number of renders or DOM structure beyond what affects users
+The implementation details a test should stay out of — component state, props passed to children, which hooks ran, render counts, DOM structure — are enumerated in [Anti-Patterns](#anti-patterns).
 
 ## Library Choice
 
@@ -71,7 +53,7 @@ Variants:
 - `queryBy*` — returns `null` (use for "assert absence")
 - `findBy*` — async, returns a Promise (use for elements that appear after async work)
 
-## User Interaction with `userEvent`
+## userEvent
 
 ```tsx
 import userEvent from "@testing-library/user-event";
@@ -105,7 +87,7 @@ await waitFor(() => expect(saveSpy).toHaveBeenCalled());
 await waitForElementToBeRemoved(() => screen.queryByText("Loading"));
 ```
 
-Never `setTimeout` + assertion — flaky. Use the matchers above.
+Use the matchers above for anything timing-dependent; a `setTimeout` plus a bare assertion flakes.
 
 ## Network Mocking with MSW
 
@@ -246,24 +228,18 @@ Run axe in component tests for every interactive component. Catches:
 
 Cross-link: [skills/accessibility/SKILL.md](../accessibility/SKILL.md) for the broader a11y testing playbook.
 
-## When NOT to Use Snapshot Tests
+## Snapshot Tests
 
-Snapshots of rendered output:
-
-- Break on every styling change
-- Get rubber-stamped during review
-- Test implementation detail (DOM structure), not behavior
-
-Acceptable snapshot uses:
+Reserve snapshots for stable serialized output:
 
 - Pure data serialization functions (`formatInvoice(invoice)` -> stable string)
 - Generated config files (e.g., webpack config output)
 
-For visual regression on components, use Playwright/Cypress screenshots or Percy/Chromatic — actual visual diffs, not DOM strings.
+Avoid snapshotting rendered component output: it breaks on every styling change, gets rubber-stamped during review, and tests DOM structure rather than behavior. For visual regression, use Playwright/Cypress screenshots or Percy/Chromatic — actual visual diffs, not DOM strings.
 
-## When to Reach for Playwright / Cypress
+## Choosing RTL vs Playwright/E2E
 
-JSDOM (used by Vitest/Jest) cannot:
+Keep in RTL what JSDOM can run. Escalate to a real browser when JSDOM cannot:
 
 - Render real layout (flexbox, grid, viewport queries)
 - Run native browser animation, CSS transitions
@@ -271,13 +247,11 @@ JSDOM (used by Vitest/Jest) cannot:
 - Handle iframes, popups, downloads, cross-origin flows
 - Run real network in a controlled environment with full DevTools support
 
-For any of those, use Playwright Component Testing (component test in real browser) or full E2E. See [e2e-testing skill](../e2e-testing/SKILL.md).
-
 Decision boundary:
 
 - A hook, a presentational component, a form with logic -> RTL
-- A component whose layout matters or that uses browser APIs not in JSDOM -> Playwright CT
-- A full user flow across multiple pages -> Playwright/Cypress E2E
+- A component whose layout matters or that uses browser APIs not in JSDOM -> Playwright Component Testing (component test in a real browser)
+- A full user flow across multiple pages -> Playwright/Cypress E2E — see [e2e-testing skill](../e2e-testing/SKILL.md)
 
 ## Coverage Targets
 
@@ -309,13 +283,16 @@ test: {
 
 ## Anti-Patterns
 
+These are the implementation-detail tests the Core Principle rules out. A test is clean when none of these appear:
+
 - `container.querySelector("...")` — bypasses accessibility queries, lets tests pass when real users would fail
-- Asserting on number of renders — implementation detail
-- `jest.mock("react", ...)` — never mock React. Refactor the component instead
+- Inspecting component state, props passed to children, or which hooks ran — assert visible output and side effects instead
+- Asserting on the number of renders — implementation detail
+- `jest.mock("react", ...)` or mocking framework hooks — never mock React; refactor the component or wrap it in a provider instead
 - Mocking child components by default — tests the integration, not isolation. Mock only when the child has heavy side effects
 - Ignoring `act()` warnings — they signal real bugs (state update after unmount, missing async wrapping)
 - Sharing mutable state across tests — flakes when test order changes
-- Tests that pass with `it.skip()` removed — your test does not actually assert what you think
+- Tests that still pass with `it.skip()` removed — the test does not actually assert what you think
 
 ## TDD Workflow
 
@@ -353,72 +330,12 @@ jest path/to/file.test.tsx
 CI=true vitest run --coverage
 ```
 
+## Worked Examples
+
+Complete runnable tests — form submission with MSW + userEvent, error boundaries, Suspense boundaries — in [EXAMPLES.md](EXAMPLES.md).
+
 ## Related
 
-- Rules: [rules/react/testing.md](../../rules/react/testing.md)
-- Skills: [react-patterns](../react-patterns/SKILL.md), [accessibility](../accessibility/SKILL.md), [e2e-testing](../e2e-testing/SKILL.md), [tdd-workflow](../tdd-workflow/SKILL.md)
+- Skills: [react-patterns](../react-patterns/SKILL.md), [accessibility](../accessibility/SKILL.md), [e2e-testing](../e2e-testing/SKILL.md), [tdd](../tdd/SKILL.md)
 - Agents: `react-reviewer` (reviews test quality during code review), `tdd-guide` (enforces TDD process)
 - Commands: `/react-test`, `/react-review`
-
-## Examples
-
-### Form submission with MSW and userEvent
-
-```tsx
-test("submits user form and shows success", async () => {
-  server.use(
-    http.post("/api/users", () =>
-      HttpResponse.json({ id: "1", name: "Alice" }, { status: 201 }),
-    ),
-  );
-
-  const user = userEvent.setup();
-  renderWithProviders(<UserForm />);
-
-  await user.type(screen.getByLabelText("Name"), "Alice");
-  await user.type(screen.getByLabelText("Email"), "alice@example.com");
-  await user.click(screen.getByRole("button", { name: /save/i }));
-
-  expect(await screen.findByText(/saved successfully/i)).toBeInTheDocument();
-});
-```
-
-### Testing an error boundary
-
-```tsx
-function Broken() {
-  throw new Error("boom");
-}
-
-test("error boundary renders fallback", () => {
-  // Suppress React's console.error noise for the expected throw, then restore so
-  // the spy does not leak across tests and hide real errors elsewhere.
-  const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-  try {
-    render(
-      <ErrorBoundary fallback={<div>Something went wrong</div>}>
-        <Broken />
-      </ErrorBoundary>,
-    );
-
-    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-  } finally {
-    errorSpy.mockRestore();
-  }
-});
-```
-
-### Testing a Suspense boundary
-
-```tsx
-test("shows loading then content", async () => {
-  renderWithProviders(
-    <Suspense fallback={<div>Loading...</div>}>
-      <UserDetail id="1" />
-    </Suspense>,
-  );
-
-  expect(screen.getByText("Loading...")).toBeInTheDocument();
-  expect(await screen.findByText("Alice")).toBeInTheDocument();
-});
-```

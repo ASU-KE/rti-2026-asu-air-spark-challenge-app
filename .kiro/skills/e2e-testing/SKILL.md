@@ -1,13 +1,11 @@
 ---
 name: e2e-testing
-description: Playwright E2E testing patterns, Page Object Model, configuration, CI/CD integration, artifact management, and flaky test strategies. Use when writing Playwright tests, structuring page objects, or fixing flaky E2E runs in CI.
+description: Playwright E2E testing patterns — Page Object Model, config, CI/CD, artifacts, and flaky-test fixes. Use when writing Playwright tests, structuring page objects, or debugging flaky E2E runs.
 metadata:
   origin: ECC
 ---
 
 # E2E Testing Patterns
-
-Comprehensive Playwright patterns for building stable, fast, and maintainable E2E test suites.
 
 ## Test File Organization
 
@@ -164,31 +162,31 @@ npx playwright test tests/search.spec.ts --retries=3
 
 **Race conditions:**
 ```typescript
-// Bad: assumes element is ready
-await page.click('[data-testid="button"]')
-
-// Good: auto-wait locator
+// Good: auto-wait locator retries until the element is actionable
 await page.locator('[data-testid="button"]').click()
+
+// Bad: bare click assumes the element is already ready
+await page.click('[data-testid="button"]')
 ```
 
 **Network timing:**
 ```typescript
+// Good: wait for the specific condition
+await page.waitForResponse(resp => resp.url().includes('/api/data'))
+
 // Bad: arbitrary timeout
 await page.waitForTimeout(5000)
-
-// Good: wait for specific condition
-await page.waitForResponse(resp => resp.url().includes('/api/data'))
 ```
 
 **Animation timing:**
 ```typescript
-// Bad: click during animation
-await page.click('[data-testid="menu-item"]')
-
-// Good: wait for stability
+// Good: wait for stability before acting
 await page.locator('[data-testid="menu-item"]').waitFor({ state: 'visible' })
 await page.waitForLoadState('networkidle')
 await page.locator('[data-testid="menu-item"]').click()
+
+// Bad: click during animation
+await page.click('[data-testid="menu-item"]')
 ```
 
 ## Artifact Management
@@ -253,6 +251,8 @@ jobs:
 
 ## Test Report Template
 
+One entry per failed test — the report is complete when the number of entries equals the Failed count in the summary.
+
 ```markdown
 # E2E Test Report
 
@@ -278,50 +278,6 @@ jobs:
 - Traces: artifacts/*.zip
 ```
 
-## Wallet / Web3 Testing
+## Specialized flows
 
-```typescript
-test('wallet connection', async ({ page, context }) => {
-  // Mock wallet provider
-  await context.addInitScript(() => {
-    window.ethereum = {
-      isMetaMask: true,
-      request: async ({ method }) => {
-        if (method === 'eth_requestAccounts')
-          return ['0x1234567890123456789012345678901234567890']
-        if (method === 'eth_chainId') return '0x1'
-      }
-    }
-  })
-
-  await page.goto('/')
-  await page.locator('[data-testid="connect-wallet"]').click()
-  await expect(page.locator('[data-testid="wallet-address"]')).toContainText('0x1234')
-})
-```
-
-## Financial / Critical Flow Testing
-
-```typescript
-test('trade execution', async ({ page }) => {
-  // Skip on production — real money
-  test.skip(process.env.NODE_ENV === 'production', 'Skip on production')
-
-  await page.goto('/markets/test-market')
-  await page.locator('[data-testid="position-yes"]').click()
-  await page.locator('[data-testid="trade-amount"]').fill('1.0')
-
-  // Verify preview
-  const preview = page.locator('[data-testid="trade-preview"]')
-  await expect(preview).toContainText('1.0')
-
-  // Confirm and wait for blockchain
-  await page.locator('[data-testid="confirm-trade"]').click()
-  await page.waitForResponse(
-    resp => resp.url().includes('/api/trade') && resp.status() === 200,
-    { timeout: 30000 }
-  )
-
-  await expect(page.locator('[data-testid="trade-success"]')).toBeVisible()
-})
-```
+Wallet / Web3 and financial / critical-flow patterns live in [`SPECIALIZED-FLOWS.md`](SPECIALIZED-FLOWS.md). Reach for it when testing wallet connection, on-chain transactions, or real-money trade flows.

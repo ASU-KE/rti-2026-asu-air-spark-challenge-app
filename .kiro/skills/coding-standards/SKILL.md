@@ -1,72 +1,44 @@
 ---
 name: coding-standards
-description: Baseline cross-project coding conventions for naming, readability, immutability, and code-quality review. Use detailed frontend or backend skills for framework-specific patterns. Use when reviewing code quality or naming with no framework-specific skill that applies.
+description: Baseline cross-project coding conventions — naming, readability, immutability, error handling, and code-smell review. Use when reviewing code quality or naming and no framework-specific skill (frontend-patterns, backend-patterns, api-design) applies.
 metadata:
   origin: ECC
 ---
 
 # Coding Standards & Best Practices
 
-Baseline coding conventions applicable across projects.
+The shared floor for every project: baseline conventions that hold regardless of framework. For framework-specific depth, reach for the narrower skill:
 
-This skill is the shared floor, not the detailed framework playbook.
-
-- Use `frontend-patterns` for React, state, forms, rendering, and UI architecture.
-- Use `backend-patterns` or `api-design` for repository/service layers, endpoint design, validation, and server-specific concerns.
-
-## When to Activate
-
-- Starting a new project or module
-- Reviewing code for quality and maintainability
-- Refactoring existing code to follow conventions
-- Enforcing naming, formatting, or structural consistency
-- Setting up linting, formatting, or type-checking rules
-- Onboarding new contributors to coding conventions
-
-## Scope Boundaries
-
-Activate this skill for:
-
-- descriptive naming
-- immutability defaults
-- readability, KISS, DRY, and YAGNI enforcement
-- error-handling expectations and code-smell review
-
-Do not use this skill as the primary source for:
-
-- React composition, hooks, or rendering patterns
-- backend architecture, API design, or database layering
-- domain-specific framework guidance when a narrower ECC skill already exists
+- `frontend-patterns` — React, state, forms, rendering, UI architecture.
+- `backend-patterns` / `api-design` — repository/service layers, endpoint design, validation, server concerns.
+- [`FRAMEWORK-EXAMPLES.md`](FRAMEWORK-EXAMPLES.md) — worked React and REST API examples that pair with this baseline.
 
 ## Code Quality Principles
 
-### 1. Readability First
+### Readability First
 
-- Code is read more than written
-- Clear variable and function names
-- Self-documenting code preferred over comments
-- Consistent formatting
+- Code is read more than written, so optimize for the reader.
+- Name variables and functions for what they hold and do.
+- Prefer self-documenting code over comments.
+- Keep formatting consistent.
 
-### 2. KISS (Keep It Simple, Stupid)
+### KISS (Keep It Simple)
 
-- Simplest solution that works
-- Avoid over-engineering
-- No premature optimization
-- Easy to understand > clever code
+- Choose the simplest solution that works.
+- Solve today's problem; add complexity only when it arrives.
+- Optimize when measurements demand it.
+- Favor understandable code over clever code.
 
-### 3. DRY (Don't Repeat Yourself)
+### DRY (Don't Repeat Yourself)
 
-- Extract common logic into functions
-- Create reusable components
-- Share utilities across modules
-- Avoid copy-paste programming
+- Extract common logic into functions.
+- Create reusable components.
+- Share utilities across modules.
 
-### 4. YAGNI (You Aren't Gonna Need It)
+### YAGNI (You Aren't Gonna Need It)
 
-- Don't build features before they're needed
-- Avoid speculative generality
-- Add complexity only when required
-- Start simple, refactor when needed
+- Build features when they are actually needed.
+- Start simple and refactor as requirements land.
 
 ## TypeScript/JavaScript Standards
 
@@ -100,6 +72,8 @@ function email(e) {}
 
 ### Immutability Pattern (CRITICAL)
 
+Create new objects with changes applied; spread the original rather than mutating it.
+
 ```typescript
 // PASS: ALWAYS use spread operator
 const updatedUser = {
@@ -115,6 +89,8 @@ items.push(newItem); // BAD
 ```
 
 ### Error Handling
+
+Handle failures at every boundary: check responses, log context, and surface a clean message.
 
 ```typescript
 // PASS: GOOD: Comprehensive error handling
@@ -142,6 +118,8 @@ async function fetchData(url) {
 
 ### Async/Await Best Practices
 
+Run independent awaits in parallel with `Promise.all`.
+
 ```typescript
 // PASS: GOOD: Parallel execution when possible
 const [users, markets, stats] = await Promise.all([
@@ -157,6 +135,8 @@ const stats = await fetchStats();
 ```
 
 ### Type Safety
+
+Give values precise types; reserve `any` for genuinely unknown shapes.
 
 ```typescript
 // PASS: GOOD: Proper types
@@ -177,172 +157,9 @@ function getMarket(id: any): Promise<any> {
 }
 ```
 
-## React Best Practices
-
-### Component Structure
-
-```typescript
-// PASS: GOOD: Functional component with types
-interface ButtonProps {
-  children: React.ReactNode
-  onClick: () => void
-  disabled?: boolean
-  variant?: 'primary' | 'secondary'
-}
-
-export function Button({
-  children,
-  onClick,
-  disabled = false,
-  variant = 'primary'
-}: ButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`btn btn-${variant}`}
-    >
-      {children}
-    </button>
-  )
-}
-
-// FAIL: BAD: No types, unclear structure
-export function Button(props) {
-  return <button onClick={props.onClick}>{props.children}</button>
-}
-```
-
-### Custom Hooks
-
-```typescript
-// PASS: GOOD: Reusable custom hook
-export function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-
-  return debouncedValue;
-}
-
-// Usage
-const debouncedQuery = useDebounce(searchQuery, 500);
-```
-
-### State Management
-
-```typescript
-// PASS: GOOD: Proper state updates
-const [count, setCount] = useState(0);
-
-// Functional update for state based on previous state
-setCount((prev) => prev + 1);
-
-// FAIL: BAD: Direct state reference
-setCount(count + 1); // Can be stale in async scenarios
-```
-
-### Conditional Rendering
-
-```typescript
-// PASS: GOOD: Clear conditional rendering
-{isLoading && <Spinner />}
-{error && <ErrorMessage error={error} />}
-{data && <DataDisplay data={data} />}
-
-// FAIL: BAD: Ternary hell
-{isLoading ? <Spinner /> : error ? <ErrorMessage error={error} /> : data ? <DataDisplay data={data} /> : null}
-```
-
-## API Design Standards
-
-### REST API Conventions
-
-```
-GET    /api/markets              # List all markets
-GET    /api/markets/:id          # Get specific market
-POST   /api/markets              # Create new market
-PUT    /api/markets/:id          # Update market (full)
-PATCH  /api/markets/:id          # Update market (partial)
-DELETE /api/markets/:id          # Delete market
-
-# Query parameters for filtering
-GET /api/markets?status=active&limit=10&offset=0
-```
-
-### Response Format
-
-```typescript
-// PASS: GOOD: Consistent response structure
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  meta?: {
-    total: number;
-    page: number;
-    limit: number;
-  };
-}
-
-// Success response
-return NextResponse.json({
-  success: true,
-  data: markets,
-  meta: { total: 100, page: 1, limit: 10 },
-});
-
-// Error response
-return NextResponse.json(
-  {
-    success: false,
-    error: "Invalid request",
-  },
-  { status: 400 },
-);
-```
-
-### Input Validation
-
-```typescript
-import { z } from "zod";
-
-// PASS: GOOD: Schema validation
-const CreateMarketSchema = z.object({
-  name: z.string().min(1).max(200),
-  description: z.string().min(1).max(2000),
-  endDate: z.string().datetime(),
-  categories: z.array(z.string()).min(1),
-});
-
-export async function POST(request: Request) {
-  const body = await request.json();
-
-  try {
-    const validated = CreateMarketSchema.parse(body);
-    // Proceed with validated data
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Validation failed",
-          details: error.issues,
-        },
-        { status: 400 },
-      );
-    }
-  }
-}
-```
-
 ## File Organization
+
+Organize by feature/domain, with many small focused files.
 
 ### Project Structure
 
@@ -377,6 +194,8 @@ types/market.types.ts         # camelCase with .types suffix
 ## Comments & Documentation
 
 ### When to Comment
+
+Comment the WHY — the reasoning a reader cannot recover from the code itself.
 
 ```typescript
 // PASS: GOOD: Explain WHY, not WHAT
@@ -488,6 +307,8 @@ test("calculates similarity correctly", () => {
 
 ### Test Naming
 
+Name each test for the behavior it pins down.
+
 ```typescript
 // PASS: GOOD: Descriptive test names
 test("returns empty array when no markets match query", () => {});
@@ -501,9 +322,11 @@ test("test search", () => {});
 
 ## Code Smell Detection
 
-Watch for these anti-patterns:
+Scan for these anti-patterns. The review is complete when every function has been checked against all three: length, nesting depth, and unnamed literals.
 
 ### 1. Long Functions
+
+Keep functions under ~50 lines by extracting steps into named helpers.
 
 ```typescript
 // FAIL: BAD: Function > 50 lines
@@ -520,6 +343,8 @@ function processMarketData() {
 ```
 
 ### 2. Deep Nesting
+
+Flatten with early returns.
 
 ```typescript
 // FAIL: BAD: 5+ levels of nesting
@@ -547,6 +372,8 @@ if (!hasPermission) return;
 
 ### 3. Magic Numbers
 
+Name literals as constants that state their meaning.
+
 ```typescript
 // FAIL: BAD: Unexplained numbers
 if (retryCount > 3) {
@@ -561,5 +388,3 @@ if (retryCount > MAX_RETRIES) {
 }
 setTimeout(callback, DEBOUNCE_DELAY_MS);
 ```
-
-**Remember**: Code quality is not negotiable. Clear, maintainable code enables rapid development and confident refactoring.

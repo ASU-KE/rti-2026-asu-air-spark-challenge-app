@@ -1,144 +1,156 @@
 ---
 name: accessibility
-description:
-  Design, implement, and audit inclusive digital products using WCAG 2.2 Level AA. Use when building or auditing UI that must meet WCAG 2.2 Level AA, or when reviewing a change for keyboard, contrast, or screen-reader support.
-  standards. Use this skill to generate semantic ARIA for Web and accessibility traits for Web and Native platforms (iOS/Android).
+description: >
+  Design, implement, and audit accessible TypeScript React UI to WCAG 2.2 Level
+  AA. Use when building an accessible component, auditing a change for keyboard,
+  contrast, or screen-reader support, or choosing semantic HTML and ARIA roles
+  in JSX/TSX.
 metadata:
   origin: ECC
 ---
 
 # Accessibility (WCAG 2.2)
 
-This skill ensures that digital interfaces are Perceivable, Operable, Understandable, and Robust (POUR) for all users, including those using screen readers, switch controls, or keyboard navigation. It focuses on the technical implementation of WCAG 2.2 success criteria.
-
-## When to Use
-
-- Defining UI component specifications for Web, iOS, or Android.
-- Auditing existing code for accessibility barriers or compliance gaps.
-- Implementing new WCAG 2.2 standards like Target Size (Minimum) and Focus Appearance.
-- Mapping high-level design requirements to technical attributes (ARIA roles, traits, hints).
+Deliver React interfaces that assistive technology (screen readers, switch controls, keyboard navigation) can operate, by implementing WCAG 2.2 success criteria in JSX/TSX.
 
 ## Core Concepts
 
-- **POUR Principles**: The foundation of WCAG (Perceivable, Operable, Understandable, Robust).
-- **Semantic Mapping**: Using native elements over generic containers to provide built-in accessibility.
-- **Accessibility Tree**: The representation of the UI that assistive technologies actually "read."
-- **Focus Management**: Controlling the order and visibility of the keyboard/screen reader cursor.
-- **Labeling & Hints**: Providing context through `aria-label`, `accessibilityLabel`, and `contentDescription`.
+- **POUR Principles**: the foundation of WCAG — Perceivable, Operable, Understandable, Robust.
+- **Semantic Mapping**: reach for the native HTML element (`<button>`, `<a>`, `<label>`) before a custom `role`, so accessibility is built in.
+- **Accessibility Tree**: the representation of the UI that assistive technology actually reads.
+- **Focus Management**: control the order and visibility of the keyboard/screen-reader cursor.
+- **Labeling & Hints**: supply context through `<label>`, `aria-label`, and `aria-describedby`.
 
 ## How It Works
 
 ### Step 1: Identify the Component Role
 
-Determine the functional purpose (e.g., Is this a button, a link, or a tab?). Use the most semantic native element available before resorting to custom roles.
+Determine the functional purpose (button, link, tab). Use the most semantic HTML element available before resorting to a custom `role`.
 
 ### Step 2: Define Perceivable Attributes
 
-- Ensure text contrast meets **4.5:1** (normal) or **3:1** (large/UI).
-- Add text alternatives for non-text content (images, icons).
-- Implement responsive reflow (up to 400% zoom without loss of function).
+- Meet text contrast of **4.5:1** (normal) or **3:1** (large/UI).
+- Add text alternatives for non-text content (images, icons) via `alt` or `aria-label`.
+- Reflow responsively up to 400% zoom without loss of function.
 
 ### Step 3: Implement Operable Controls
 
-- Ensure a minimum **24x24 CSS pixel** target size (WCAG 2.2 SC 2.5.8).
-- Verify all interactive elements are reachable via keyboard and have a visible focus indicator (SC 2.4.11).
+- Meet a minimum target size of **24x24 CSS px** (SC 2.5.8).
+- Make every interactive element keyboard-reachable with a visible focus indicator (SC 2.4.11).
 - Provide single-pointer alternatives for dragging movements.
 
 ### Step 4: Ensure Understandable Logic
 
-- Use consistent navigation patterns.
-- Provide descriptive error messages and suggestions for correction (SC 3.3.3).
-- Implement "Redundant Entry" (SC 3.3.7) to prevent asking for the same data twice.
+- Keep navigation patterns consistent.
+- Give descriptive error messages with correction suggestions (SC 3.3.3).
+- Apply Redundant Entry (SC 3.3.7) so users are never asked for the same data twice.
 
 ### Step 5: Verify Robust Compatibility
 
-- Use correct `Name, Role, Value` patterns.
-- Implement `aria-live` or live regions for dynamic status updates.
+- Expose correct `Name, Role, Value` patterns.
+- Announce dynamic status through `aria-live` regions.
 
-## Accessibility Architecture Diagram
+## HTML & ARIA Mapping
 
-```mermaid
-flowchart TD
-  UI["UI Component"] --> Platform{Platform?}
-  Platform -->|Web| ARIA["WAI-ARIA + HTML5"]
-  Platform -->|iOS| SwiftUI["Accessibility Traits + Labels"]
-  Platform -->|Android| Compose["Semantics + ContentDesc"]
+Reach for the semantic HTML element first; add the ARIA attribute only when JSX needs to fill a gap the element leaves.
 
-  ARIA --> AT["Assistive Technology (Screen Readers, Switches)"]
-  SwiftUI --> AT
-  Compose --> AT
-```
-
-## Cross-Platform Mapping
-
-| Feature            | Web (HTML/ARIA)          | iOS (SwiftUI)                        | Android (Compose)                                           |
-| :----------------- | :----------------------- | :----------------------------------- | :---------------------------------------------------------- |
-| **Primary Label**  | `aria-label` / `<label>` | `.accessibilityLabel()`              | `contentDescription`                                        |
-| **Secondary Hint** | `aria-describedby`       | `.accessibilityHint()`               | `Modifier.semantics { stateDescription = ... }`             |
-| **Action Role**    | `role="button"`          | `.accessibilityAddTraits(.isButton)` | `Modifier.semantics { role = Role.Button }`                 |
-| **Live Updates**   | `aria-live="polite"`     | `.accessibilityLiveRegion(.polite)`  | `Modifier.semantics { liveRegion = LiveRegionMode.Polite }` |
+| Feature            | Semantic HTML          | ARIA attribute (JSX)          |
+| :----------------- | :--------------------- | :---------------------------- |
+| **Primary Label**  | `<label htmlFor>`      | `aria-label`                  |
+| **Secondary Hint** | —                      | `aria-describedby`            |
+| **Action Role**    | `<button>`             | `role="button"` (last resort) |
+| **Live Updates**   | —                      | `aria-live="polite"`          |
 
 ## Examples
 
-### Web: Accessible Search
+### Accessible Search
 
-```html
-<form role="search">
-  <label for="search-input" class="sr-only">Search products</label>
-  <input type="search" id="search-input" placeholder="Search..." />
-  <button type="submit" aria-label="Submit Search">
-    <svg aria-hidden="true">...</svg>
-  </button>
-</form>
-```
-
-### iOS: Accessible Action Button
-
-```swift
-Button(action: deleteItem) {
-    Image(systemName: "trash")
+```tsx
+function ProductSearch() {
+  return (
+    <form role="search">
+      <label htmlFor="search-input" className="sr-only">
+        Search products
+      </label>
+      <input type="search" id="search-input" placeholder="Search..." />
+      <button type="submit" aria-label="Submit search">
+        <svg aria-hidden="true">...</svg>
+      </button>
+    </form>
+  );
 }
-.accessibilityLabel("Delete item")
-.accessibilityHint("Permanently removes this item from your list")
-.accessibilityAddTraits(.isButton)
 ```
 
-### Android: Accessible Toggle
+### Accessible Icon Button
 
-```kotlin
-Switch(
-    checked = isEnabled,
-    onCheckedChange = { onToggle() },
-    modifier = Modifier.semantics {
-        contentDescription = "Enable notifications"
-    }
-)
+```tsx
+function DeleteButton({ onDelete }: { onDelete: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onDelete}
+      aria-label="Delete item"
+      aria-describedby="delete-hint"
+    >
+      <svg aria-hidden="true">...</svg>
+      <span id="delete-hint" className="sr-only">
+        Permanently removes this item from your list
+      </span>
+    </button>
+  );
+}
 ```
 
-## Anti-Patterns to Avoid
+### Accessible Toggle
 
-- **Div-Buttons**: Using a `<div>` or `<span>` for a click event without adding a role and keyboard support.
-- **Color-Only Meaning**: Indicating an error or status _only_ with a color change (e.g., turning a border red).
-- **Uncontained Modal Focus**: Modals that don't trap focus, allowing keyboard users to navigate background content while the modal is open. Focus must be contained _and_ escapable via the `Escape` key or an explicit close button (WCAG SC 2.1.2).
-- **Redundant Alt Text**: Using "Image of..." or "Picture of..." in alt text (screen readers already announce the role "Image").
+```tsx
+function NotificationToggle({
+  enabled,
+  onToggle,
+}: {
+  enabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      aria-label="Enable notifications"
+      onClick={onToggle}
+    >
+      {enabled ? "On" : "Off"}
+    </button>
+  );
+}
+```
+
+## Common Pitfalls
+
+Lead with the correct behavior; each pitfall below teaches a trap the steps above don't spell out.
+
+- **Operable controls, not click-only containers**: a `<div>` or `<span>` with an `onClick` needs an explicit `role` and keyboard handler to be reachable — reach for `<button>` instead.
+- **Signal status with text or an icon, not color alone**: a red border communicates nothing to users who can't perceive the color.
+- **Trap focus in modals and release it cleanly on close**: focus stays contained while open and returns to the trigger, escapable via `Escape` or an explicit close button (SC 2.1.2).
+- **Write alt text as the content itself**: skip "Image of…" / "Picture of…" — the screen reader already announces the "Image" role.
 
 ## Best Practices Checklist
 
-- [ ] Interactive elements meet the **24x24px** (Web) or **44x44pt** (Native) target size.
+Sign off only when every box is checked for the change under review.
+
+- [ ] Interactive elements meet the **24x24 CSS px** target size.
 - [ ] Focus indicators are clearly visible and high-contrast.
-- [ ] Modals **contain focus** while open, and release it cleanly on close (`Escape` key or close button).
+- [ ] Modals contain focus while open and release it on close (`Escape` key or close button).
 - [ ] Dropdowns and menus restore focus to the trigger element on close.
 - [ ] Forms provide text-based error suggestions.
-- [ ] All icon-only buttons have a descriptive text label.
+- [ ] Icon-only buttons have a descriptive text label.
 - [ ] Content reflows properly when text is scaled.
 
 ## References
 
 - [WCAG 2.2 Guidelines](https://www.w3.org/TR/WCAG22/)
 - [WAI-ARIA Authoring Practices](https://www.w3.org/TR/wai-aria-practices/)
-- [iOS Accessibility Programming Guide](https://developer.apple.com/documentation/accessibility)
-- [iOS Human Interface Guidelines - Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)
-- [Android Accessibility Developer Guide](https://developer.android.com/guide/topics/ui/accessibility)
+- [MDN ARIA Reference](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA)
 
 ## Related Skills
 

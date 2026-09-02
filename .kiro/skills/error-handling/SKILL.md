@@ -1,36 +1,28 @@
 ---
 name: error-handling
-description: Patterns for robust error handling across TypeScript, Python, and Go. Covers typed errors, error boundaries, retries, circuit breakers, and user-facing error messages. Use when designing error types, retries, circuit breakers, or user-facing failure messages in TypeScript, Python, or Go.
+description: Error-handling patterns for TypeScript React and Python FastAPI. Use when designing error types, adding retries, or writing user-facing failure messages; reviewing endpoints for missing error handling; or debugging cascading failures and silent error swallowing.
 metadata:
   origin: ECC
 ---
 
 # Error Handling Patterns
 
-Consistent, robust error handling patterns for production applications.
-
-## When to Activate
-
-- Designing error types or exception hierarchies for a new module or service
-- Adding retry logic or circuit breakers for unreliable external dependencies
-- Reviewing API endpoints for missing error handling
-- Implementing user-facing error messages and feedback
-- Debugging cascading failures or silent error swallowing
-
 ## Core Principles
 
 1. **Fail fast and loudly** — surface errors at the boundary where they occur; don't bury them
 2. **Typed errors over string messages** — errors are first-class values with structure
 3. **User messages ≠ developer messages** — show friendly text to users, log full context server-side
-4. **Never swallow errors silently** — every `catch` block must either handle, re-throw, or log
+4. **Handle every error** — every `catch` block handles, re-throws, or logs; none swallowed silently
 5. **Errors are part of your API contract** — document every error code a client may receive
 
-## TypeScript / JavaScript
+## TypeScript React (Frontend)
+
+Model the errors your API returns as typed values, turn them into friendly copy, and contain render failures with a boundary.
 
 ### Typed Error Classes
 
 ```typescript
-// Define an error hierarchy for your domain
+// Mirror the error codes your FastAPI backend returns, as first-class values
 export class AppError extends Error {
   constructor(
     message: string,
@@ -74,7 +66,7 @@ export class RateLimitError extends AppError {
 
 ### Result Pattern (no-throw style)
 
-For operations where failure is expected and common (parsing, external calls):
+For operations where failure is expected and common (fetching from the API, parsing):
 
 ```typescript
 type Result<T, E = AppError> =
@@ -89,82 +81,79 @@ function err<E>(error: E): Result<never, E> {
   return { ok: false, error }
 }
 
-// Usage
+// Decode the backend error envelope into a typed AppError
 async function fetchUser(id: string): Promise<Result<User>> {
-  try {
-    const user = await db.users.findUnique({ where: { id } })
-    if (!user) return err(new NotFoundError('User', id))
-    return ok(user)
-  } catch (e) {
-    return err(new AppError('Database error', 'DB_ERROR'))
+  const res = await fetch(`/api/users/${id}`)
+  if (res.status === 404) return err(new NotFoundError('User', id))
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    const code = body?.error?.code ?? 'INTERNAL_ERROR'
+    return err(new AppError(body?.error?.message ?? 'Request failed', code, res.status))
   }
+  return ok((await res.json()) as User)
 }
 
 const result = await fetchUser('abc-123')
 if (!result.ok) {
   // TypeScript knows result.error here
   logger.error('Failed to fetch user', { error: result.error })
-  return
+} else {
+  // TypeScript knows result.value here
+  console.log(result.value.email)
 }
-// TypeScript knows result.value here
-console.log(result.value.email)
 ```
 
-### API Error Handler (Next.js / Express)
+### User-Facing Error Messages
+
+Map error codes to human-readable messages. Keep technical details out of user-visible text.
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server'
-
-function handleApiError(error: unknown): NextResponse {
-  // Known application error
-  if (error instanceof AppError) {
-    return NextResponse.json(
-      {
-        error: {
-          code: error.code,
-          message: error.message,
-          ...(error.details ? { details: error.details } : {}),
-        },
-      },
-      { status: error.statusCode },
-    )
-  }
-
-  // Zod validation error
-  if (error instanceof z.ZodError) {
-    return NextResponse.json(
-      {
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Request validation failed',
-          details: error.issues.map(i => ({
-            field: i.path.join('.'),
-            message: i.message,
-          })),
-        },
-      },
-      { status: 422 },
-    )
-  }
-
-  // Unexpected error — log details, return generic message
-  console.error('Unexpected error:', error)
-  return NextResponse.json(
-    { error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' } },
-    { status: 500 },
-  )
+const USER_ERROR_MESSAGES: Record<string, string> = {
+  NOT_FOUND: 'The requested item could not be found.',
+  UNAUTHORIZED: 'Please sign in to continue.',
+  FORBIDDEN: "You don't have permission to do that.",
+  VALIDATION_ERROR: 'Please check your input and try again.',
+  RATE_LIMITED: 'Too many requests. Please wait a moment and try again.',
+  INTERNAL_ERROR: 'Something went wrong on our end. Please try again later.',
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    // ... handler logic
-  } catch (error) {
-    return handleApiError(error)
-  }
+export function getUserMessage(code: string): string {
+  return USER_ERROR_MESSAGES[code] ?? USER_ERROR_MESSAGES.INTERNAL_ERROR
+}
+```
+
+### Fetching with Error Handling
+
+Compose the typed fetch with the message map inside a component. Guard against setting state after unmount, and surface only the friendly message.
+
+```typescript
+import { useEffect, useState } from 'react'
+
+function UserProfile({ id }: { id: string }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetchUser(id).then(result => {
+      if (!active) return
+      if (result.ok) setUser(result.value)
+      else setErrorMessage(getUserMessage(result.error.code))
+    })
+    return () => {
+      active = false
+    }
+  }, [id])
+
+  if (errorMessage) return <p role="alert">{errorMessage}</p>
+  if (!user) return <p>Loading…</p>
+  return <h1>{user.email}</h1>
 }
 ```
 
 ### React Error Boundary
+
+Catches render-time errors a `try/catch` cannot reach.
 
 ```typescript
 import { Component, ErrorInfo, ReactNode } from 'react'
@@ -204,7 +193,9 @@ export class ErrorBoundary extends Component<Props, State> {
 </ErrorBoundary>
 ```
 
-## Python
+## Python FastAPI (Backend)
+
+Define a domain exception hierarchy, translate it to the standard envelope in exception handlers, and retry only transient upstream failures.
 
 ### Custom Exception Hierarchy
 
@@ -226,148 +217,125 @@ class ValidationError(AppError):
         self.details = details or []
 ```
 
-### FastAPI Global Exception Handler
+### Exception Handlers
+
+Register handlers once on the app. Every response follows the same envelope `{"error": {"code", "message"}}` the frontend decodes.
 
 ```python
-from fastapi import FastAPI, Request
+import logging
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+logger = logging.getLogger(__name__)
 app = FastAPI()
 
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    error: dict = {"code": exc.code, "message": str(exc)}
+    if getattr(exc, "details", None):
+        error["details"] = exc.details
+    return JSONResponse(status_code=exc.status_code, content={"error": error})
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Request validation failed",
+                "details": [
+                    {"field": ".".join(str(p) for p in e["loc"]), "message": e["msg"]}
+                    for e in exc.errors()
+                ],
+            }
+        },
+    )
+
+@app.exception_handler(HTTPException)
+async def http_error_handler(request: Request, exc: HTTPException) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": {"code": exc.code, "message": str(exc)}},
+        content={"error": {"code": "HTTP_ERROR", "message": exc.detail}},
     )
 
 @app.exception_handler(Exception)
 async def generic_error_handler(request: Request, exc: Exception) -> JSONResponse:
-    # Log full details, return generic message
-    logger.exception("Unexpected error", exc_info=exc)
+    # Log full details, return a generic message
+    logger.exception("Unexpected error")
     return JSONResponse(
         status_code=500,
         content={"error": {"code": "INTERNAL_ERROR", "message": "An unexpected error occurred"}},
     )
 ```
 
-## Go
+Raise the typed errors from route handlers and let the handlers shape the response:
 
-### Sentinel Errors and Error Wrapping
+```python
+@app.get("/api/users/{user_id}")
+async def get_user(user_id: str) -> User:
+    user = await repo.find_by_id(user_id)
+    if user is None:
+        raise NotFoundError("User", user_id)
+    return user
+```
 
-```go
-package domain
+### Retry with Exponential Backoff
 
-import "errors"
+Wrap calls to external services. Retry transient failures (5xx, timeouts), never client errors (4xx).
 
-// Sentinel errors for type-checking
-var (
-    ErrNotFound    = errors.New("not found")
-    ErrUnauthorized = errors.New("unauthorized")
-    ErrConflict     = errors.New("conflict")
+```python
+import asyncio
+import random
+from functools import wraps
+from typing import Awaitable, Callable, TypeVar
+
+import httpx
+
+T = TypeVar("T")
+
+def retry(
+    max_attempts: int = 3,
+    base_delay: float = 0.5,
+    max_delay: float = 10.0,
+    retry_if: Callable[[Exception], bool] = lambda exc: True,
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
+    """Retry an async call with exponential backoff and jitter."""
+    def decorator(fn: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+        @wraps(fn)
+        async def wrapper(*args, **kwargs) -> T:
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return await fn(*args, **kwargs)
+                except Exception as exc:
+                    if attempt == max_attempts or not retry_if(exc):
+                        raise
+                    jitter = random.uniform(0, base_delay)
+                    delay = min(base_delay * 2 ** (attempt - 1) + jitter, max_delay)
+                    await asyncio.sleep(delay)
+            raise AssertionError("unreachable")
+        return wrapper
+    return decorator
+
+# Usage: retry transient upstream failures, not application errors
+@retry(
+    max_attempts=3,
+    retry_if=lambda exc: not isinstance(exc, AppError) or exc.status_code >= 500,
 )
-
-// Wrap errors with context — never lose the original
-func (r *UserRepository) FindByID(ctx context.Context, id string) (*User, error) {
-    user, err := r.db.QueryRow(ctx, "SELECT * FROM users WHERE id = $1", id)
-    if errors.Is(err, sql.ErrNoRows) {
-        return nil, fmt.Errorf("user %s: %w", id, ErrNotFound)
-    }
-    if err != nil {
-        return nil, fmt.Errorf("querying user %s: %w", id, err)
-    }
-    return user, nil
-}
-
-// At the handler level, unwrap to determine response
-func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
-    user, err := h.service.GetUser(r.Context(), chi.URLParam(r, "id"))
-    if err != nil {
-        switch {
-        case errors.Is(err, domain.ErrNotFound):
-            writeError(w, http.StatusNotFound, "not_found", err.Error())
-        case errors.Is(err, domain.ErrUnauthorized):
-            writeError(w, http.StatusForbidden, "forbidden", "Access denied")
-        default:
-            slog.Error("unexpected error", "err", err)
-            writeError(w, http.StatusInternalServerError, "internal_error", "An unexpected error occurred")
-        }
-        return
-    }
-    writeJSON(w, http.StatusOK, user)
-}
-```
-
-## Retry with Exponential Backoff
-
-```typescript
-interface RetryOptions {
-  maxAttempts?: number
-  baseDelayMs?: number
-  maxDelayMs?: number
-  retryIf?: (error: unknown) => boolean
-}
-
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {},
-): Promise<T> {
-  const {
-    maxAttempts = 3,
-    baseDelayMs = 500,
-    maxDelayMs = 10_000,
-    retryIf = () => true,
-  } = options
-
-  let lastError: unknown
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await fn()
-    } catch (error) {
-      lastError = error
-      if (attempt === maxAttempts || !retryIf(error)) throw error
-
-      const jitter = Math.random() * baseDelayMs
-      const delay = Math.min(baseDelayMs * 2 ** (attempt - 1) + jitter, maxDelayMs)
-      await new Promise(resolve => setTimeout(resolve, delay))
-    }
-  }
-
-  throw lastError
-}
-
-// Usage: retry transient network errors, not 4xx
-const data = await withRetry(() => fetch('/api/data').then(r => r.json()), {
-  maxAttempts: 3,
-  retryIf: (error) => !(error instanceof AppError && error.statusCode < 500),
-})
-```
-
-## User-Facing Error Messages
-
-Map error codes to human-readable messages. Keep technical details out of user-visible text.
-
-```typescript
-const USER_ERROR_MESSAGES: Record<string, string> = {
-  NOT_FOUND: 'The requested item could not be found.',
-  UNAUTHORIZED: 'Please sign in to continue.',
-  FORBIDDEN: "You don't have permission to do that.",
-  VALIDATION_ERROR: 'Please check your input and try again.',
-  RATE_LIMITED: 'Too many requests. Please wait a moment and try again.',
-  INTERNAL_ERROR: 'Something went wrong on our end. Please try again later.',
-}
-
-export function getUserMessage(code: string): string {
-  return USER_ERROR_MESSAGES[code] ?? USER_ERROR_MESSAGES.INTERNAL_ERROR
-}
+async def fetch_inventory(sku: str) -> dict:
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"https://inventory.internal/items/{sku}")
+        resp.raise_for_status()
+        return resp.json()
 ```
 
 ## Error Handling Checklist
 
-Before merging any code that touches error handling:
+Before merging any code that touches error handling, confirm every item — the review is complete only when all are checked:
 
-- [ ] Every `catch` block handles, re-throws, or logs — no silent swallowing
+- [ ] Every `catch`/`except` block handles, re-throws, or logs — no silent swallowing
 - [ ] API errors follow the standard envelope `{ error: { code, message } }`
 - [ ] User-facing messages contain no stack traces or internal details
 - [ ] Full error context is logged server-side

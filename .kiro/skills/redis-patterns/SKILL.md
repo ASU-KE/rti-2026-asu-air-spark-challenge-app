@@ -1,26 +1,13 @@
 ---
 name: redis-patterns
-description: Redis data structure patterns, caching strategies, distributed locks, rate limiting, pub/sub, and connection management for production applications. Use when adding caching, a distributed lock, rate limiting, or pub/sub with Redis, or when key design needs review.
+description: Redis patterns for production — caching, distributed locks, rate limiting, pub/sub and Streams, sessions, key/TTL design, connection and eviction config. Use when adding caching, a lock, rate limiting, sessions, or messaging with Redis, reviewing key or TTL design, or tuning Redis for production.
 metadata:
   origin: ECC
 ---
 
 # Redis Patterns
 
-Quick reference for Redis best practices across common backend use cases.
-
-## How It Works
-
-Redis is an in-memory data structure store that supports strings, hashes, lists, sets, sorted sets, streams, and more. Individual Redis commands are atomic on a single instance; multi-step workflows require Lua scripts, MULTI/EXEC transactions, or explicit synchronization to stay atomic. Data is optionally persisted via RDB snapshots or AOF logs. Clients communicate over TCP using the RESP protocol; connection pools are essential to avoid per-request handshake overhead.
-
-## When to Activate
-
-- Adding caching to an application
-- Implementing rate limiting or throttling
-- Building distributed locks or coordination
-- Setting up session or token storage
-- Using Pub/Sub or Redis Streams for messaging
-- Configuring Redis in production (pooling, eviction, clustering)
+Production Redis best practices across common backend use cases. Single commands are atomic; multi-step workflows need a Lua script, `MULTI`/`EXEC`, or a pipeline with `transaction=True` to stay atomic — this drives the Lua and pipeline choices throughout.
 
 ## Data Structure Cheat Sheet
 
@@ -118,6 +105,8 @@ def delete_session(session_id: str):
 
 ## Rate Limiting
 
+Use fixed-window for low-traffic endpoints; use sliding-window Lua for accurate per-user throttling.
+
 ### Fixed Window (Simple)
 
 ```python
@@ -165,7 +154,7 @@ def allow_request(user_id: int) -> bool:
 
 ## Distributed Locks
 
-### Distributed Lock (Single Node — SET NX PX)
+Single-node lock via `SET NX PX`. For multi-node setups use the `redlock-py` library, which implements the full Redlock algorithm.
 
 ```python
 import uuid
@@ -196,9 +185,9 @@ if token:
         release_lock("order:payment:123", token)
 ```
 
-> For multi-node setups use the `redlock-py` library which implements the full Redlock algorithm.
-
 ## Pub/Sub & Streams
+
+Prefer **Streams** over Pub/Sub when you need delivery guarantees, consumer groups, or replay; use Pub/Sub for fire-and-forget broadcast.
 
 ### Pub/Sub (Fire-and-Forget)
 
@@ -238,8 +227,6 @@ def consume(stream: str, group: str, consumer: str):
                 r.xack(stream, group, msg_id)
 ```
 
-> Prefer **Streams** over Pub/Sub when you need delivery guarantees, consumer groups, or replay.
-
 ## Key Design
 
 ### Naming Conventions
@@ -260,6 +247,8 @@ stats:pageviews:2024-01-01
 
 ### TTL Strategy
 
+Always set a TTL. Keys without one accumulate indefinitely and cause memory pressure.
+
 | Data Type | Suggested TTL |
 |-----------|--------------|
 | User session | 24h (`86400`) |
@@ -269,66 +258,9 @@ stats:pageviews:2024-01-01
 | Leaderboard | 1h–24h |
 | Static/reference data | 1h–1 week |
 
-Always set a TTL. Keys without TTL accumulate indefinitely and cause memory pressure.
-
-## Connection Management
-
-### Connection Pooling
-
-```python
-from redis import ConnectionPool, Redis
-
-pool = ConnectionPool(
-    host='localhost',
-    port=6379,
-    db=0,
-    max_connections=20,
-    decode_responses=True,
-    socket_connect_timeout=2,
-    socket_timeout=2,
-)
-
-r = Redis(connection_pool=pool)
-```
-
-### Cluster Mode
-
-```python
-from redis.cluster import RedisCluster
-
-r = RedisCluster(
-    startup_nodes=[{"host": "redis-1", "port": 6379}],
-    decode_responses=True,
-    skip_full_coverage_check=True,
-)
-```
-
-### Sentinel (High Availability)
-
-```python
-from redis.sentinel import Sentinel
-
-sentinel = Sentinel(
-    [('sentinel-1', 26379), ('sentinel-2', 26379)],
-    socket_timeout=0.5,
-)
-master = sentinel.master_for('mymaster', decode_responses=True)
-replica = sentinel.slave_for('mymaster', decode_responses=True)
-```
-
-## Eviction Policies
-
-| Policy | Behavior | Best For |
-|--------|----------|----------|
-| `noeviction` | Error on write when full | Queues / critical data |
-| `allkeys-lru` | Evict least recently used | General cache |
-| `volatile-lru` | LRU only among keys with TTL | Mixed data store |
-| `allkeys-lfu` | Evict least frequently used | Skewed access patterns |
-| `volatile-ttl` | Evict soonest-to-expire | Prioritize long-lived data |
-
-Set via `redis.conf`: `maxmemory-policy allkeys-lru`
-
 ## Anti-Patterns
+
+When reviewing key design or a Redis integration, check every key and call site against every row below before sign-off.
 
 | Anti-Pattern | Problem | Fix |
 |---|---|---|
@@ -366,21 +298,7 @@ def get_with_lock(key: str, fetch_fn, ttl: int = 300):
         return value
 ```
 
-> Note: for multi-process deployments, replace the in-process lock with `acquire_lock`/`release_lock` from the Distributed Locks section above.
-
-## Examples
-
-**Add caching to a Django/Flask API endpoint:**
-Use cache-aside with `setex` and a 5-minute TTL on the response. Key on the request parameters.
-
-**Rate-limit an API by user:**
-Use fixed-window with `pipeline(transaction=True)` for low-traffic endpoints; use sliding-window Lua for accurate per-user throttling.
-
-**Coordinate a background job across workers:**
-Use `acquire_lock` with a TTL that exceeds the expected job duration. Always release in a `finally` block.
-
-**Fan-out notifications to multiple subscribers:**
-Use Pub/Sub for fire-and-forget. Switch to Streams if you need guaranteed delivery or replay for late consumers.
+For multi-process deployments, replace the in-process lock with `acquire_lock`/`release_lock` from [Distributed Locks](#distributed-locks).
 
 ## Quick Reference
 
@@ -394,6 +312,10 @@ Use Pub/Sub for fire-and-forget. Switch to Streams if you need guaranteed delive
 | Pub/Sub | Broadcast with no delivery guarantees needed |
 | Sorted Set leaderboard | Ranked scoring, pagination |
 | HyperLogLog | Approximate unique count at low memory |
+
+## Production Configuration
+
+Connection pooling, cluster mode, Sentinel HA, and eviction policies: [`production-config.md`](production-config.md).
 
 ## Related
 
