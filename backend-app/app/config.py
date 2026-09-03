@@ -29,6 +29,6 @@ class Settings(BaseSettings):
     # ASU Research Computing LLM gateway (ADR-0004). `SecretStr` keeps the key
     # out of reprs, logs, and serialised settings; it is never sent to a client.
     # Optional for now because no code calls the gateway yet — the slice that
-    # introduces the ProviderClient makes it required at startup.
+    # introduces the ProviderClient makes it required at startup and adds the
+    # gateway base URL alongside it.
     provider_api_key: SecretStr | None = None
-    provider_base_url: str = "https://openai.rc.asu.edu/v1"
