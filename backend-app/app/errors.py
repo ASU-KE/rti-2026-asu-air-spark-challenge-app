@@ -1,10 +1,11 @@
 """Map framework exceptions onto the standard response envelope.
 
-FastAPI's defaults answer with ``{"detail": ...}``, which the frontend client
-cannot read. Registering these handlers means every failure reaches the client
-in the same shape as a success.
+FastAPI's defaults answer with ``{"detail": ...}`` — or plain text for an
+unhandled exception — which the frontend client cannot read. Registering these
+handlers means every failure reaches the client in the same shape as a success.
 """
 
+import logging
 from typing import cast
 
 from fastapi import FastAPI, Request
@@ -16,6 +17,13 @@ from starlette.types import ExceptionHandler
 from app.schemas.envelope import failed
 
 _VALIDATION_FAILED = 422
+_INTERNAL_ERROR = 500
+
+# Deliberately opaque: the cause is logged server-side, never sent to a client,
+# because exception text can carry credentials or connection detail.
+_INTERNAL_ERROR_MESSAGE = "Internal server error"
+
+_logger = logging.getLogger(__name__)
 
 
 def register_error_handlers(app: FastAPI) -> None:
@@ -31,6 +39,7 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(
         RequestValidationError, cast(ExceptionHandler, _handle_validation_error)
     )
+    app.add_exception_handler(Exception, _handle_unexpected_error)
 
 
 async def _handle_http_exception(
@@ -45,6 +54,14 @@ async def _handle_validation_error(
 ) -> JSONResponse:
     """Answer a schema validation failure by naming the offending fields."""
     return _envelope_response(_VALIDATION_FAILED, _describe_validation_failure(exc))
+
+
+async def _handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+    """Answer an unhandled exception generically, logging the real cause."""
+    _logger.exception(
+        "Unhandled error serving %s %s", request.method, request.url.path
+    )
+    return _envelope_response(_INTERNAL_ERROR, _INTERNAL_ERROR_MESSAGE)
 
 
 def _describe_validation_failure(exc: RequestValidationError) -> str:
