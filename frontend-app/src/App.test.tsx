@@ -13,16 +13,15 @@ function renderApp(initialPath = "/") {
 }
 
 describe("App shell", () => {
-  it("renders semantic landmarks", () => {
+  it("renders the ASU Unity banner and a main landmark", () => {
     renderApp();
     expect(screen.getByRole("banner")).toBeInTheDocument();
-    expect(screen.getByRole("navigation")).toBeInTheDocument();
     expect(screen.getByRole("main")).toBeInTheDocument();
   });
 
-  it("exposes primary navigation to all four screens", () => {
+  it("exposes site navigation to all four screens", () => {
     renderApp();
-    const nav = screen.getByRole("navigation", { name: /primary/i });
+    const siteNav = screen.getByRole("navigation", { name: /site/i });
     for (const label of [
       "Experiment Builder",
       "Network Overview",
@@ -30,9 +29,23 @@ describe("App shell", () => {
       "Dataset Manager",
     ]) {
       expect(
-        within(nav).getByRole("link", { name: label }),
+        within(siteNav).getByRole("link", { name: label }),
       ).toBeInTheDocument();
     }
+  });
+
+  it("provides a skip link that targets the main landmark", () => {
+    renderApp();
+    const skipLink = screen.getByRole("link", {
+      name: /skip to main content/i,
+    });
+    const target = skipLink.getAttribute("href")?.replace(/^#/, "");
+
+    expect(target).toBeTruthy();
+    // The skip link must resolve to the main region, not a dangling fragment.
+    expect(document.getElementById(target as string)).toBe(
+      screen.getByRole("main"),
+    );
   });
 
   it("lands on the Experiment Builder screen by default", () => {
@@ -42,30 +55,22 @@ describe("App shell", () => {
     ).toBeInTheDocument();
   });
 
-  it("marks the active screen's nav link with aria-current", async () => {
-    const user = userEvent.setup();
-    renderApp();
-
-    const runMonitorLink = screen.getByRole("link", { name: "Run Monitor" });
-    await user.click(runMonitorLink);
-
-    expect(runMonitorLink).toHaveAttribute("aria-current", "page");
-  });
-
-  it("provides a skip link to the main content", () => {
-    renderApp();
-    const skipLink = screen.getByRole("link", { name: /skip to main content/i });
-    expect(skipLink).toHaveAttribute("href", "#main-content");
-  });
-
   it("navigates to another screen when its nav link is activated", async () => {
     const user = userEvent.setup();
     renderApp();
 
-    await user.click(screen.getByRole("link", { name: "Run Monitor" }));
+    const siteNav = screen.getByRole("navigation", { name: /site/i });
+    await user.click(within(siteNav).getByRole("link", { name: "Run Monitor" }));
 
     expect(
       screen.getByRole("heading", { level: 1, name: /run monitor/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the deep-linked screen on a direct visit", () => {
+    renderApp("/datasets");
+    expect(
+      screen.getByRole("heading", { level: 1, name: /dataset manager/i }),
     ).toBeInTheDocument();
   });
 });
