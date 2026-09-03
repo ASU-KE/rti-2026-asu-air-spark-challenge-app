@@ -1,5 +1,5 @@
 # ASU Unity Design System packages are hosted on GitHub Packages, not npmjs.
-# Copy this file to `.npmrc` (gitignored) or rely on the committed `.npmrc`,
+# Copy this file to `.npmrc` (gitignored) and provide a GITHUB_TOKEN with `read:packages` scope from an account that
 # and provide a GITHUB_TOKEN with `read:packages` scope from an account that
 # has access to the ASU org packages.
 #
