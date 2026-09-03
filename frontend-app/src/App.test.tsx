@@ -42,6 +42,22 @@ describe("App shell", () => {
     ).toBeInTheDocument();
   });
 
+  it("marks the active screen's nav link with aria-current", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    const runMonitorLink = screen.getByRole("link", { name: "Run Monitor" });
+    await user.click(runMonitorLink);
+
+    expect(runMonitorLink).toHaveAttribute("aria-current", "page");
+  });
+
+  it("provides a skip link to the main content", () => {
+    renderApp();
+    const skipLink = screen.getByRole("link", { name: /skip to main content/i });
+    expect(skipLink).toHaveAttribute("href", "#main-content");
+  });
+
   it("navigates to another screen when its nav link is activated", async () => {
     const user = userEvent.setup();
     renderApp();

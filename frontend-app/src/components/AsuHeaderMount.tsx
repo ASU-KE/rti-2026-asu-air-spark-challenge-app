@@ -25,15 +25,20 @@ export function AsuHeaderMount({
   parentOrg,
   parentOrgUrl,
 }: AsuHeaderMountProps) {
-  const containerId = useRef(
-    `asu-header-${Math.random().toString(36).slice(2)}`,
-  );
+  const containerId = useRef<string>("");
+  if (!containerId.current) {
+    containerId.current = `asu-header-${Math.random().toString(36).slice(2)}`;
+  }
 
   useEffect(() => {
     let cancelled = false;
-    void import("@asu/component-header-footer/dist/asuHeaderFooter.umd.js").then(
-      (mod) => {
+    const container = document.getElementById(containerId.current);
+
+    void import("@asu/component-header-footer/dist/asuHeaderFooter.umd.js")
+      .then((mod) => {
         if (cancelled) return;
+        // Clear any prior instance before re-initializing into the same node.
+        if (container) container.innerHTML = "";
         mod.initGlobalHeader({
           targetSelector: `#${containerId.current}`,
           props: {
@@ -45,8 +50,13 @@ export function AsuHeaderMount({
             breakpoint: "Lg",
           },
         });
-      },
-    );
+      })
+      .catch((error: unknown) => {
+        // Surface activation failures loudly rather than silently swallowing
+        // them — this is the seam that guards the known React #527 crash.
+        console.error("Failed to mount ASU Unity header", error);
+      });
+
     return () => {
       cancelled = true;
     };

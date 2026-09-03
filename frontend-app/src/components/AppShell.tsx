@@ -20,6 +20,10 @@ import "./AppShell.css";
 export function AppShell() {
   return (
     <>
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
+
       <header className="app-banner">
         <a className="app-banner__brand" href="https://www.asu.edu">
           <span className="app-banner__wordmark">
@@ -28,10 +32,6 @@ export function AppShell() {
         </a>
         <p className="app-banner__title">AIRgents of Change</p>
       </header>
-
-      <a className="skip-link" href="#main-content">
-        Skip to main content
-      </a>
 
       <nav aria-label="Primary" className="primary-nav">
         <ul className="primary-nav__list">

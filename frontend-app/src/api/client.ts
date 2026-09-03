@@ -29,8 +29,8 @@ export async function apiFetch<T>(
   init?: RequestInit,
 ): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...init?.headers },
     ...init,
+    headers: { "Content-Type": "application/json", ...init?.headers },
   });
 
   let envelope: ApiEnvelope<T> | null = null;
