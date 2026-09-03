@@ -1,0 +1,21 @@
+[project]
+name = "rti-challenge-backend"
+version = "0.1.0"
+description = "Backend for the ASU AIR Spark Challenge agent-experiment harness"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "pydantic",
+    "pydantic-settings",
+    "uvicorn[standard]",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "httpx",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
