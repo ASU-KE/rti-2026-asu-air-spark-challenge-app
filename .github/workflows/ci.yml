@@ -58,6 +58,9 @@ jobs:
       - name: Install dependencies
         if: steps.guard.outputs.run == 'true'
         run: uv sync
+      - name: Typecheck
+        if: steps.guard.outputs.run == 'true'
+        run: uv run mypy
       - name: Run tests
         if: steps.guard.outputs.run == 'true'
         run: uv run pytest -x -q
