@@ -20,10 +20,10 @@ jobs:
         with:
           filters: |
             backend:
-              - '**/*.py'
-              - 'pyproject.toml'
-              - 'uv.lock'
-              - 'requirements*.txt'
+              - 'backend/**/*.py'
+              - 'backend/pyproject.toml'
+              - 'backend/uv.lock'
+              - 'backend/requirements*.txt'
             frontend:
               - '**/*.{ts,tsx}'
               - 'package.json'
@@ -42,9 +42,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - id: guard
-        name: Check for pyproject.toml
+        name: Check for backend/pyproject.toml
         run: |
-          if [ ! -f pyproject.toml ]; then
+          if [ ! -f backend/pyproject.toml ]; then
             echo "No Python project yet — skipping"
             echo "run=false" >> "$GITHUB_OUTPUT"
             exit 0
@@ -57,9 +57,11 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         if: steps.guard.outputs.run == 'true'
+        working-directory: backend
         run: uv sync
       - name: Run tests
         if: steps.guard.outputs.run == 'true'
+        working-directory: backend
         run: uv run pytest -x -q
 
   frontend:
