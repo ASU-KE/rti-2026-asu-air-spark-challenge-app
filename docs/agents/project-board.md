@@ -31,7 +31,7 @@ Project fields below are for workflow state and sequencing.
 | Field | Type | Values |
 | --- | --- | --- |
 | Status | single-select | Backlog · Ready · Blocked · In Progress · In Review · Done |
-| Area | single-select | Domain/Engine · ProviderClient · RunExecutor · Repository · API · Frontend · Auth · Testing · Docs · Infra |
+| Area | single-select | Domain/Engine · ProviderClient · RunExecutor · Repository · API · Frontend · Testing · Docs · Infra |
 | Priority | single-select | P0 · P1 · P2 |
 | Size | single-select | XS · S · M · L |
 | Iteration | iteration | *(optional; add via UI if time-boxing — see below)* |
@@ -52,7 +52,7 @@ Sub-issues progress.
 
 Durable classification that travels with the issue (usable in `gh issue list` queries):
 
-- **Area:** `area:engine`, `area:provider`, `area:api`, `area:frontend`, `area:auth`,
+- **Area:** `area:engine`, `area:provider`, `area:api`, `area:frontend`,
   `area:testing`, `area:infra`, `area:docs`
 - **Type:** `type:feature`, `type:refactor`, `type:prefactor`, `type:chore`
 
@@ -113,7 +113,6 @@ Re-fetch with `gh project field-list 13 --owner ASU-KE --format json` if fields 
 | | | Repository | `69cedf53` |
 | | | API | `88fa7902` |
 | | | Frontend | `807a8b75` |
-| | | Auth | `257aa1a9` |
 | | | Testing | `9de8aa94` |
 | | | Docs | `eb96afcc` |
 | | | Infra | `c40ff0e7` |

@@ -3,8 +3,9 @@
 - **Status:** ready-for-agent (not yet split into work tickets)
 - **Source discovery:** `docs/session-transcripts/2026-09-02T175136-0400.ndrollin.Kiro.AIRgents-of-Change-Discovery.md`
 - **Glossary:** `CONTEXT.md` — this spec uses those canonical terms.
-- **Decisions of record:** `docs/adr/0001`–`0006`.
-- **Deployment:** GCP candidates in `docs/planning/gcp-service-mapping.md`; infrastructure deferred to a separate session.
+- **Decisions of record:** `docs/adr/0001`–`0005`.
+- **Deployment:** local development workstations only; cloud deployment (GCP or otherwise) is
+  out of scope for the prototype.
 
 > Scope note: this is the **constrained, framework-shaped prototype** (ADR-0001). The domain
 > model and module seams are designed as if for the full framework, but the built surface is a
@@ -17,11 +18,7 @@
 
 A researcher studying social collective action needs to run controlled experiments in which
 LLM-driven Agents hold and revise positions on a proposition while their access to peers and
-to background information is deliberately unequal. Today there is no tool that lets them
-configure such a society, run it reproducibly, watch it unfold, and export the results.
-Doing this by hand — wiring prompts, tracking who-can-see-what, sequencing turns, staying
-within an LLM provider's rate limits, and collecting per-turn data — is slow, error-prone,
-and not reproducible.
+to background information is deliberately unequal.
 
 ## Solution
 
@@ -143,17 +140,13 @@ through a single shared, rate-limited **ProviderClient**.
 45. As a researcher, I want to export the per-Round Stance table as CSV, so that I can
     analyze it in standard tools.
 
-### Access, security, and operation
+### Operation
 
-46. As a researcher, I want the application restricted to asu.edu SSO, so that only
-    authorized users can reach it.
-47. As a researcher, I want the backend to reject requests without a valid identity, so that
-    the API is protected even behind the edge proxy.
-48. As an operator, I want the provider API key kept server-side only, so that it is never
+46. As an operator, I want the provider API key kept server-side only, so that it is never
     exposed to the browser.
-49. As an operator, I want clear server-side logs of Run progress and provider retry/`429`
+47. As an operator, I want clear server-side logs of Run progress and provider retry/`429`
     behavior, so that I can diagnose issues.
-50. As a researcher, I want clear, user-friendly error messages when something fails, so that
+48. As a researcher, I want clear, user-friendly error messages when something fails, so that
     I can correct configuration or retry.
 
 ## Implementation Decisions
@@ -227,16 +220,12 @@ through a single shared, rate-limited **ProviderClient**.
   schema-based validation; validation failures return clear, user-friendly messages.
 - Live Round Records stream over an SSE endpoint on the Run resource.
 
-### Authentication (ADR-0006)
+### Security
 
-- The application is fronted by **Cloudflare Access restricted to asu.edu SSO**. The FastAPI
-  backend **independently validates the signed Access JWT** (signature via the edge JWKS,
-  audience, asu.edu identity claim) on every request via an injected auth dependency (defense
-  in depth).
-- Authorization for the prototype is "any authenticated asu.edu principal"; the principal is
-  captured through the auth seam for future per-user ownership. The provider API key is
-  server-side only.
-- Cloudflare / GKE / Terraform specifics are deferred to a separate infrastructure session.
+- The prototype runs **locally on development workstations only**; there is no authentication
+  or authorization in the prototype (no SSO, no JWT validation — the former ADR-0006 edge-auth
+  design is dropped along with cloud deployment). The provider API key remains a **server-side
+  secret only**, never sent to the frontend.
 
 ### Frontend
 
@@ -269,7 +258,6 @@ strings, or call sequencing beyond what is observable at the seam.
     carry-forward with the Round Record flagged `unparsed`; the Run continues.
   - **Reproducibility**: same Experiment + Seed + scripted Model yields identical Round
     Records.
-  - **Auth**: requests without a valid asu.edu JWT are rejected; valid ones succeed.
 
 - **Injected boundaries (deterministic doubles, not new seams):**
   1. A **fake `ProviderClient`** returning scripted Markdown responses per Agent per Round —
@@ -292,16 +280,15 @@ strings, or call sequencing beyond what is observable at the seam.
 
 ## Out of Scope
 
-- Concrete persistence engine, external job runner, frontend hosting/CDN, and all
-  Cloudflare/GKE/Terraform infrastructure (separate infrastructure/Terraform session).
+- Concrete persistence engine, external job runner, frontend hosting/CDN, and all cloud
+  deployment and infrastructure. The prototype runs locally on development workstations only.
 - Per-Model rate controls (single shared throttle only; deferred to a later feature cycle).
 - Per-Agent Model selection (per-Role override is the finest granularity in the prototype).
 - LLM-driven Orchestrator (deterministic predicate only).
 - Summarized/full-history Agent memory (windowed memory only).
 - Real-time/continuous-time simulation (discrete Rounds only).
 - Provider embeddings or any non-chat-completions capability.
-- Finer-grained RBAC and per-user data isolation (principal is captured but not yet enforced
-  as ownership).
+- Authentication and authorization (no SSO, no per-user identity; the app is local-only).
 - Cost modeling and pricing estimates.
 - Collective-action scenarios other than opinion dynamics / consensus under unequal
   information.

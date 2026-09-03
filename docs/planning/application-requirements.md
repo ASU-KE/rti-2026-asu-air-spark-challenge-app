@@ -4,7 +4,7 @@ Application title: AIRgents of Change
 
 This is a full-stack application that will operate as a lightweight multi-agent harness. It will allow a researcher to organize groups of LLM agents to perform experiments on problems of social collective action when agents have differential access to information and communication. It must support OpenAI-compatible LLM providers.
 
-It will be deployed into a dev GKE cluster. The specific GCP deployment details are not required at this time, just a development plan for the application stack itself. Document what GCP services can fulfill specific components of this application, but actual deployment and hosting architecture will planned separately.
+The prototype will run locally on development workstations only. Cloud deployment (GCP or otherwise) is out of scope for the prototype; actual deployment and hosting architecture may be planned separately at a later time.
 
 The frontend application will be a Typescript React, and the backend will be Python FastAPI.
 
