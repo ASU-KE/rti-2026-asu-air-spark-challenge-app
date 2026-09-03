@@ -1,13 +1,13 @@
 ---
 name: react-performance
-description: React and Next.js performance optimization — a priority-ranked rule catalog adapted from Vercel Labs react-best-practices (https://github.com/vercel-labs/agent-skills, MIT). Use when writing, reviewing, or refactoring React/Next.js code for speed, bundle size, or Core Web Vitals.
+description: React performance optimization — a priority-ranked rule catalog adapted from Vercel Labs react-best-practices (https://github.com/vercel-labs/agent-skills, MIT). Use when writing, reviewing, or refactoring React code for speed, bundle size, or Core Web Vitals.
 metadata:
   origin: ECC
 ---
 
 # React Performance
 
-A priority-ranked catalog for React 18/19 and Next.js, with decision-tree guidance for active review and refactoring. Work top-down: the higher a category, the larger its typical win. When reviewing, apply every rule in a category before dropping to the next — the pass is done once every category from Waterfalls through Advanced Patterns has been checked against the diff.
+A priority-ranked catalog for React 18/19, with decision-tree guidance for active review and refactoring. Work top-down: the higher a category, the larger its typical win. When reviewing, apply every rule in a category before dropping to the next — the pass is done once every category from Waterfalls through Advanced Patterns has been checked against the diff.
 
 ## Priority Index
 
@@ -15,14 +15,13 @@ A priority-ranked catalog for React 18/19 and Next.js, with decision-tree guidan
 |---|---|---|---|
 | 1 — CRITICAL | Eliminating Waterfalls | `async-` | Anytime `await` is followed by independent `await` |
 | 2 — CRITICAL | Bundle Size Optimization | `bundle-` | First-load JS, route-level imports, third-party libs |
-| 3 — HIGH | Server-Side Performance | `server-` | RSC, Server Actions, API routes, SSR |
-| 4 — MEDIUM-HIGH | Client-Side Data Fetching | `client-` | SWR / TanStack Query / raw `fetch` in hooks |
-| 5 — MEDIUM | Re-render Optimization | `rerender-` | High-frequency state updates, parent-child fan-out |
-| 6 — MEDIUM | Rendering Performance | `rendering-` | Long lists, animations, hydration |
-| 7 — LOW-MEDIUM | JavaScript Performance | `js-` | Hot loops, frequent allocations |
-| 8 — LOW | Advanced Patterns | `advanced-` | Effect-event integration, stable refs |
+| 3 — MEDIUM-HIGH | Client-Side Data Fetching | `client-` | SWR / TanStack Query / raw `fetch` in hooks |
+| 4 — MEDIUM | Re-render Optimization | `rerender-` | High-frequency state updates, parent-child fan-out |
+| 5 — MEDIUM | Rendering Performance | `rendering-` | Long lists, animations |
+| 6 — LOW-MEDIUM | JavaScript Performance | `js-` | Hot loops, frequent allocations |
+| 7 — LOW | Advanced Patterns | `advanced-` | Effect-event integration, stable refs |
 
-Categories 7 and 8 are disclosed to [`JS-AND-ADVANCED.md`](JS-AND-ADVANCED.md) — reach for them only after 1–6 are clean and profiling still shows a JS-bound or hook-stability bottleneck.
+Categories 6 and 7 are disclosed to [`JS-AND-ADVANCED.md`](JS-AND-ADVANCED.md) — reach for them only after 1–5 are clean and profiling still shows a JS-bound or hook-stability bottleneck.
 
 ## 1. Eliminating Waterfalls (CRITICAL)
 
@@ -97,27 +96,6 @@ const [user, posts] = await Promise.all([userP, postsP]);
 
 Push `<Suspense>` boundaries close to the data so the page paints what it can while slower sub-trees stream in. The trade-off: layout shift when content arrives — reserve space (skeleton or `min-height`).
 
-### Server Components: parallel through composition
-
-```tsx
-// INCORRECT — sibling awaits run sequentially inside one component
-export default async function Page() {
-  const user = await getUser();
-  const cart = await getCart();
-  return <View user={user} cart={cart} />;
-}
-
-// CORRECT — split into children, React runs them in parallel
-export default async function Page() {
-  return (
-    <View>
-      <UserSection />
-      <CartSection />
-    </View>
-  );
-}
-```
-
 ## 2. Bundle Size Optimization (CRITICAL)
 
 ### Direct imports over barrels
@@ -134,8 +112,6 @@ import { Card } from "@/components/Card";
 import { Modal } from "@/components/Modal";
 ```
 
-Next.js 13.5+ has [Optimize Package Imports](https://nextjs.org/docs/app/api-reference/next-config-js/optimizePackageImports) that automates this for listed packages — use it; manual direct imports still required for non-listed libs.
-
 ### Statically analyzable paths
 
 ```ts
@@ -149,17 +125,22 @@ const mod = name === "home" ? await import("./pages/home") : await import("./pag
 ### Dynamic imports for heavy components
 
 ```tsx
-import dynamic from "next/dynamic";
+import { lazy, Suspense } from "react";
 
-const HeavyChart = dynamic(() => import("./HeavyChart"), {
-  loading: () => <Skeleton />,
-  ssr: false, // when client-only
-});
+const HeavyChart = lazy(() => import("./HeavyChart"));
+
+function ChartPanel() {
+  return (
+    <Suspense fallback={<Skeleton />}>
+      <HeavyChart />
+    </Suspense>
+  );
+}
 ```
 
 ### Defer third-party scripts
 
-Load analytics, logging, support widgets AFTER hydration. Use `next/script` with `strategy="afterInteractive"` (default) or `"lazyOnload"`.
+Load analytics, logging, and support widgets after the app is interactive. Inject the `<script>` with `defer`/`async`, or append it from an effect after first paint, so it never blocks initial render.
 
 ### Conditional module loading
 
@@ -174,87 +155,7 @@ if (user.role === "admin") {
 
 Trigger `<link rel="preload">` or `import()` on hover so the bundle is in cache by the time the user clicks.
 
-## 3. Server-Side Performance (HIGH)
-
-### Authenticate Server Actions like API routes
-
-Every `"use server"` function is a public endpoint. Authenticate AND authorize inside the action — never rely on the calling Client Component's gating.
-
-```ts
-"use server";
-export async function deleteUser(formData: FormData) {
-  const session = await getSession();
-  if (!session?.user) throw new Error("Unauthorized");
-  const targetId = String(formData.get("id"));
-  if (session.user.role !== "admin" && session.user.id !== targetId) {
-    throw new Error("Forbidden");
-  }
-  await db.user.delete({ where: { id: targetId } });
-}
-```
-
-### `React.cache()` for per-request deduplication
-
-```ts
-import { cache } from "react";
-
-export const getUser = cache(async (id: string) => {
-  return db.user.findUnique({ where: { id } });
-});
-```
-
-`React.cache` dedupes within a single request. Calling `getUser("1")` from three Server Components in the same render = one DB query.
-
-### LRU cache for cross-request data
-
-For data that does NOT change per request (config, lookup tables), cache outside React with an LRU cache or `unstable_cache`.
-
-### Avoid duplicate serialization in RSC props
-
-When a Server Component renders the same data into multiple Client Components, the data is serialized once per consumer. Lift the Client Component up and pass children.
-
-### Hoist static I/O to module scope
-
-```ts
-// CORRECT — runs once at module load
-const fontData = readFileSync(fontPath);
-
-export async function Page() {
-  return <Banner font={fontData} />;
-}
-```
-
-### Keep server state request-scoped
-
-Store per-request data in request-scoped storage (`headers()`, `cookies()`, async context). Module-level mutable state on the server is shared across all requests — a race condition between users.
-
-### Minimize data passed to Client Components
-
-Only serialize what the Client needs. Strip fields, paginate, project columns at the DB layer.
-
-### Parallelize nested fetches with Promise.all per item
-
-```ts
-const users = await getUsers();
-const enriched = await Promise.all(
-  users.map(async (u) => ({ ...u, posts: await getPostsFor(u.id) })),
-);
-```
-
-### Use `after()` for non-blocking work
-
-Next.js 15 `after()` runs work after the response is sent — logging, cache warming, analytics.
-
-```ts
-import { after } from "next/server";
-export async function GET() {
-  const data = await getData();
-  after(() => logAnalytics(data));
-  return Response.json(data);
-}
-```
-
-## 4. Client-Side Data Fetching (MEDIUM-HIGH)
+## 3. Client-Side Data Fetching (MEDIUM-HIGH)
 
 ### SWR / TanStack Query for deduplication
 
@@ -286,7 +187,7 @@ Improves scrolling smoothness; the listener cannot `preventDefault()`.
 - Always store a `version` field; bump on schema change and migrate or discard old data
 - Keep payloads small — `localStorage` is synchronous and blocks main thread
 
-## 5. Re-render Optimization (MEDIUM)
+## 4. Re-render Optimization (MEDIUM)
 
 ### Read callback-only state on call
 
@@ -420,7 +321,7 @@ function Outer() {
 
 A component defined inside another gets a new type each render, defeating reconciliation and unmounting its children.
 
-## 6. Rendering Performance (MEDIUM)
+## 5. Rendering Performance (MEDIUM)
 
 ### Animate the wrapper, not the SVG
 
@@ -446,18 +347,6 @@ function Page() {
 ### SVG: reduce coordinate precision
 
 `d="M10.123456,20.654321"` → `d="M10.12,20.65"`. Each digit costs bytes; the visual difference is sub-pixel.
-
-### Hydration no-flicker via inline script
-
-For values needed before hydration (theme, locale), inline a `<script>` that sets `document.documentElement.dataset.*` before React mounts.
-
-### Suppress expected hydration mismatches narrowly
-
-```tsx
-<time suppressHydrationWarning>{new Date().toLocaleString()}</time>
-```
-
-Use ONLY for known-divergent leaf nodes — never on a tree containing other children.
 
 ### `<Activity>` for show/hide instead of mount/unmount
 
@@ -493,10 +382,9 @@ preconnect("https://api.example.com");
 
 Many of these rules are now automated:
 
-- **Next.js 13.5+ Optimize Package Imports** — barrel import optimization
 - **React Compiler** (RFC, in canary) — auto-memoization
-- **Turbopack** — faster builds, better tree-shaking
-- **Bundle Analyzer** (`@next/bundle-analyzer`) — visualize first-load JS
+- **Vite / Rollup tree-shaking** — dead-code elimination at build time
+- **rollup-plugin-visualizer** — visualize first-load JS
 
 When the project ships React Compiler, demote `rerender-*` manual memoization rules to "review-only" — the compiler handles them. Manual `useMemo`/`useCallback` becomes unnecessary noise.
 
@@ -508,7 +396,7 @@ When the project ships React Compiler, demote `rerender-*` manual memoization ru
 | **INP** (Interaction to Next Paint) | Re-render, Rendering, JavaScript |
 | **CLS** (Cumulative Layout Shift) | Rendering (Suspense placement, image dimensions) |
 | **TBT** (Total Blocking Time) | Bundle Size, JavaScript, Defer Third-Party |
-| **FID** (legacy) | Bundle Size, Hydration |
+| **FID** (legacy) | Bundle Size |
 
 ## Related
 

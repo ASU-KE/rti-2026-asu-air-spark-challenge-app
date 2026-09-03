@@ -1,24 +1,25 @@
 ---
 name: security-review
-description: Perform a focused security audit on PRs touching IAM policies, networking, security groups, authentication, or secrets. Use when a security review is explicitly requested, or when changes involve permissions, network exposure, or credential handling.
+description: Focused security audit on PRs touching authentication, authorization, secrets, input handling, GCP IAM, or GKE networking. Use when a security review is explicitly requested, or when changes involve permissions, network exposure, or credential handling.
 ---
 
 ## When to Activate
 
-This skill goes deeper than the security section in pr-review. Use it when:
-- A PR modifies IAM policies, roles, or permission boundaries
-- Security groups or network ACLs are added/modified
-- Authentication or authorization logic changes
-- Secrets, credentials, or API keys may be exposed
+This skill goes deeper than the security lens in pr-review. Use it when a PR:
+- Changes authentication or authorization (FastAPI auth dependencies, JWT/session handling, React route or action guards)
+- Handles secrets, credentials, or API keys
+- Adds or changes GCP IAM roles, bindings, or service accounts
+- Modifies GKE networking, VPC firewall rules, or Ingress/Gateway exposure
+- Touches input boundaries (request bodies, query params, uploads) or database queries
 - A reviewer explicitly requests a security-focused review
 
 ## Before Asking the User
 
 Search for answers in official documentation first:
-- Google IAM docs for policy evaluation logic
-- Terraform provider docs for resource behavior
-- Repo's existing IAM patterns for established conventions
-- AWS security best practices for the relevant service
+- Google Cloud IAM docs for role/binding evaluation and Workload Identity Federation
+- FastAPI security docs (OAuth2, dependencies) and OWASP references for app-layer issues
+- The repo's existing auth, secrets, and IAM patterns
+- The GKE hardening guide for cluster and workload settings
 
 ## Review Process
 
@@ -32,51 +33,61 @@ scripts/scan-secrets.sh
 
 This scans the current branch diff for leaked secrets, API keys, tokens, and credentials.
 
-### 2. IAM Policy Analysis
+### 2. Authentication & Authorization
 
-For every IAM policy in the diff:
+- Are protected FastAPI routes guarded by a shared auth dependency, not ad hoc per-handler checks?
+- Is authorization enforced server-side? Never trust the client or React state to gate access.
+- Are tokens verified for signature, expiry, and audience, and are sessions stored in `httpOnly`, `Secure` cookies rather than `localStorage`?
+- Do object-level checks prevent IDOR — one user reaching another's resource by guessing an id?
 
-- **Actions:** Are they scoped to specific actions or using `*`?
-- **Resources:** Are they scoped to specific ARNs or using `*`?
-- **Conditions:** Are there conditions restricting when the policy applies?
-- **Effect:** Any explicit Denys that might be overridden elsewhere?
-- **Trust policies:** Who/what can assume this role? Is the principal scoped tightly?
+### 3. Input Handling & Injection
 
-See `references/iam-anti-patterns.md` for common over-permissive patterns and their fixes.
-
-### 3. Network Exposure Check
-
-For security group and network changes:
-
-- Is `0.0.0.0/0` used on any ingress rule? Flag immediately.
-- Are ports scoped to what the service actually needs?
-- Are CIDR ranges appropriate for the environment?
-- Are egress rules unnecessarily broad?
-
-See `references/sg-baseline.md` for acceptable ports/CIDRs per environment.
+- Is every external input validated at the boundary with a Pydantic schema (backend) or a typed schema (frontend)?
+- Are database queries built with SQLAlchemy constructs or bound parameters — never f-string or `%`-formatted SQL?
+- Is user-supplied HTML sanitized? Flag `dangerouslySetInnerHTML` with untrusted input.
+- Are file paths and uploads validated against path traversal, with content types and sizes bounded?
 
 ### 4. Secrets & Credential Handling
 
-- Are secrets fetched at runtime (Vault, SSM, Secrets Manager) or hardcoded?
-- Are sensitive Terraform outputs marked `sensitive = true`?
-- Are credentials passed via environment variables rather than command-line arguments?
-- Are secret paths explicitly enumerated rather than wildcarded?
-- Is access logging enabled on storage containing sensitive data?
+- Are secrets fetched at runtime from Secret Manager (or injected env), never hardcoded or committed?
+- Is Workload Identity Federation used for GKE workloads and external CI/CD, instead of long-lived service-account keys?
+- Are required secrets validated at startup and kept out of logs and error responses?
 
-### 5. Blast Radius Assessment
+### 5. GCP IAM Least Privilege
 
-- What's the worst case if this policy is exploited?
-- Can this role pivot to other accounts or services?
-- Is there a break-glass procedure if this needs to be revoked quickly?
+For every IAM role or binding in the diff:
+
+- **Roles:** A predefined or custom role scoped to need — not a primitive `roles/owner`, `roles/editor`, or `roles/viewer`?
+- **Members:** A dedicated least-privilege service account per workload — not the default compute SA or a user account?
+- **Scope:** Granted at the narrowest resource (bucket, dataset, topic, secret) rather than the whole project?
+- **Keys:** No exported service-account keys where Workload Identity Federation would work?
+- **`iam.serviceAccountUser` / `actAs`:** Granted only where impersonation is genuinely required?
+
+See `references/iam-anti-patterns.md` for common over-permissive patterns and their fixes.
+
+### 6. GKE & Network Exposure
+
+- Is anything exposed publicly that shouldn't be — a `LoadBalancer` Service or an Ingress without authentication?
+- Do VPC firewall rules avoid `0.0.0.0/0` except on 443 behind a managed load balancer? SSH and database ports are never world-open.
+- Are databases reachable only privately (Private Service Connect or authorized networks), never via public IP?
+- Are workloads least-privileged: non-root, read-only root filesystem, dropped capabilities, and a `NetworkPolicy` in place?
+
+See `references/network-baseline.md` for acceptable ports, sources, and per-environment rules.
+
+### 7. Blast Radius Assessment
+
+- What is the worst case if this route, credential, or role is abused?
+- Can the identity pivot to other services or projects?
+- Is there a fast revoke or rollback path — rotate the secret, remove the binding, disable the route?
 
 ## Response Format
 
 ```
 ## Security Review
 
-**Scope:** [IAM / Networking / Auth / Secrets / Mixed]
+**Scope:** [Auth / Input / Secrets / IAM / Network / Mixed]
 **Risk Level:** [low / medium / high / critical]
-**Blast Radius:** [single service / account-wide / cross-account]
+**Blast Radius:** [single service / project-wide / cross-project]
 
 ### 🔴 Security Blockers
 - [specific findings with remediation]
@@ -91,7 +102,7 @@ See `references/sg-baseline.md` for acceptable ports/CIDRs per environment.
 - [good practices observed]
 
 ### Least-Privilege Recommendation
-[Suggest a scoped-down policy using assets/iam-policy-template.json as a starting point]
+[Suggest a scoped-down role/binding using assets/iam-binding-template.tf as a starting point]
 ```
 
 ## Principles
@@ -99,4 +110,5 @@ See `references/sg-baseline.md` for acceptable ports/CIDRs per environment.
 - Assume breach: review as if an attacker will find any weakness
 - Least privilege is the default — burden of proof is on the permission, not the restriction
 - Temporary permissions become permanent — flag anything "we'll scope down later"
-- Network exposure is harder to undo than IAM — treat SG changes with extra scrutiny
+- Server-side is the only trust boundary — never rely on the client (React) to enforce security
+- Network exposure is harder to undo than a role change — treat firewall and Ingress changes with extra scrutiny

@@ -9,6 +9,18 @@ metadata:
 
 For Git configuration, aliases, ignore rules, and hooks, see [`CONFIG-AND-HOOKS.md`](CONFIG-AND-HOOKS.md). For semantic versioning, tags, and changelogs, see [`RELEASES.md`](RELEASES.md).
 
+## Delivery Pipeline: slice → review → small PR
+
+How a `to-tickets` vertical slice reaches `main`. The rule is **one slice, one short-lived branch, one small PR** — readability by a human reviewer is the bar, and it outranks batching for speed. No monolithic PRs.
+
+1. **Branch per slice.** Cut `feature/<slice>` from `main` (GitHub Flow, below). A slice is sized to one fresh context window (`to-tickets`), so its branch lives a day or two, not weeks.
+2. **Atomic commits track the red → green loop.** Each commit is one coherent step that builds and passes on its own (`tdd`): the failing `test:`, the `feat:`/`fix:` that greens it, an optional `refactor:`. One logical change per commit — never fold a refactor into a feature. Atomic commits let a reviewer read the slice as a story.
+3. **Two review gates before the PR is ready.** Once the slice is green, run `/code-review` (Standards + Spec), then `/security-review` when the slice touches auth, secrets, input boundaries, or data access (skip only when none apply, and say so). Clear blockers before requesting human review.
+4. **Open one small PR to `main`.** Keep the diff readable in a single sitting — well under ~400 lines; if it grows past that, the slice was too big, so split it. Fill the PR template below, link the ticket, and require green CI (tests, lint, typecheck). Manage the PR with `github-ops`.
+5. **Merge and delete the branch.** Keep the atomic history when each commit stands alone; squash only a messy branch. Deploy from `main`.
+
+**Integration branch — only when a slice can't stay green alone.** The default is slice → PR → `main`. When `to-tickets` sequenced batches that promise green only together (a wide refactor's expand–contract, or slices that must assemble before end-to-end coverage is meaningful), point those PRs at a shared integration branch instead of `main`, run the full Playwright suite there (`e2e-testing`), and merge the integration branch to `main` in one reviewed PR once green. This keeps `main` deployable while still allowing e2e across the assembled slices.
+
 ## Branching Strategies
 
 ### GitHub Flow (Simple, Recommended for Most)

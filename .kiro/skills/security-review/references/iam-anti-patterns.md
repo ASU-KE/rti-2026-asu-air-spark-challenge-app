@@ -1,123 +1,93 @@
-# IAM Anti-Patterns
+# GCP IAM Anti-Patterns
 
-Common over-permissive patterns found in ASU PRs, with fixes.
+Common over-permissive patterns, with fixes. GCP IAM grants a **role** (a bundle of permissions) to a **member** (user, group, or service account) on a **resource** (organization, project, or a single resource).
 
-## 1. Wildcard Actions
+## 1. Primitive Roles
 
-**Bad:**
-```json
-{
-  "Effect": "Allow",
-  "Action": "s3:*",
-  "Resource": "*"
+**Bad:** granting a project-wide primitive role.
+
+```hcl
+resource "google_project_iam_member" "app" {
+  project = var.project_id
+  role    = "roles/editor"        # or roles/owner, roles/viewer
+  member  = "serviceAccount:${google_service_account.app.email}"
 }
 ```
 
-**Fix:** Scope to the actions actually needed:
-```json
-{
-  "Effect": "Allow",
-  "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
-  "Resource": [
-    "arn:aws:s3:::my-bucket",
-    "arn:aws:s3:::my-bucket/*"
-  ]
+Primitive roles (`roles/owner`, `roles/editor`, `roles/viewer`) span every service in the project.
+
+**Fix:** grant a predefined role scoped to the service the workload actually uses:
+
+```hcl
+resource "google_project_iam_member" "app" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.app.email}"
 }
 ```
 
-## 2. AdministratorAccess on Service Roles
+## 2. Using the Default Compute Service Account
+
+**Bad:** workloads run as the default compute service account, which carries broad editor-like scope.
+
+**Fix:** create a dedicated least-privilege service account per workload and bind only the roles it needs. Disable automatic role grants to the default SA.
+
+## 3. Exported Service-Account Keys
 
 **Bad:**
 ```hcl
-resource "aws_iam_role_policy_attachment" "jenkins_admin" {
-  role       = aws_iam_role.jenkins.name
-  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+resource "google_service_account_key" "app" {
+  service_account_id = google_service_account.app.name
 }
 ```
 
-**When acceptable:** Only for Jenkins PoP roles that manage full-account infrastructure. Even then, flag for awareness.
+Exported JSON keys are long-lived credentials that leak and never expire on their own.
 
-**Fix for application roles:** Create a custom policy with only the permissions the service needs.
+**Fix:** use **Workload Identity Federation** — bind the GKE Kubernetes service account (or external CI/CD identity) to the Google service account, so no key material exists:
 
-## 3. Wildcarded Vault Secret Paths
+```hcl
+resource "google_service_account_iam_member" "wi" {
+  service_account_id = google_service_account.app.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.k8s_namespace}/${var.k8s_sa}]"
+}
+```
+
+## 4. Public Members (`allUsers` / `allAuthenticatedUsers`)
 
 **Bad:**
 ```hcl
-ops_vault_policies = [
-  {
-    path         = "secret/*"
-    capabilities = ["read", "create", "update", "delete"]
-  }
-]
+resource "google_storage_bucket_iam_member" "public" {
+  bucket = google_storage_bucket.data.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"                 # anyone on the internet
+}
 ```
 
-**Fix:** Enumerate specific paths:
+`allAuthenticatedUsers` is barely better — it means any Google account, not your users.
+
+**Fix:** grant to the specific service account, group, or domain that needs access. Reserve `allUsers` for genuinely public assets (e.g. a static site bucket), and document why.
+
+## 5. Project-Level Binding for a Single-Resource Need
+
+**Bad:** granting `roles/storage.admin` at the project when the workload touches one bucket.
+
+**Fix:** grant on the resource, not the project:
+
 ```hcl
-ops_vault_policies = [
-  {
-    path         = "secret/services/dco/jenkins/myteam/myapp/*"
-    capabilities = ["read", "create", "update"]
-  }
-]
-```
-
-## 4. Overly Broad Trust Policies
-
-**Bad:**
-```json
-{
-  "Principal": {"AWS": "*"},
-  "Action": "sts:AssumeRole"
+resource "google_storage_bucket_iam_member" "app" {
+  bucket = google_storage_bucket.uploads.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.app.email}"
 }
 ```
 
-**Fix:** Scope to specific role ARNs:
-```json
-{
-  "Principal": {"AWS": "arn:aws:iam::524415254265:role/EKS-ServiceAccount-jenkins-myteam"},
-  "Action": "sts:AssumeRole"
-}
-```
+## 6. Unscoped Impersonation (`actAs`)
 
-## 5. Missing Conditions
+**Bad:** granting `roles/iam.serviceAccountUser` or `roles/iam.serviceAccountTokenCreator` at the project level lets a member impersonate every service account.
 
-**Bad:** A policy that grants cross-account access with no conditions.
-
-**Fix:** Add conditions to restrict:
-```json
-{
-  "Condition": {
-    "StringEquals": {
-      "aws:PrincipalOrgID": "o-xxxxxxxxxx"
-    }
-  }
-}
-```
-
-## 6. CreateLogGroup with Resource *
-
-**Bad:**
-```json
-{
-  "Action": ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
-  "Resource": "*"
-}
-```
-
-**Fix:** Split — `CreateLogGroup` can use `*`, but stream/event writes scope to the log group ARN:
-```json
-[
-  {
-    "Action": "logs:CreateLogGroup",
-    "Resource": "*"
-  },
-  {
-    "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
-    "Resource": "arn:aws:logs:us-west-2:123456789:log-group:/aws/lambda/my-function:*"
-  }
-]
-```
+**Fix:** grant impersonation on the specific target service account only, and only where a workflow genuinely needs to act as it.
 
 ## 7. "We'll Scope Down Later"
 
-Any comment or PR description that says permissions will be tightened in a future PR is a red flag. Temporary permissions become permanent. Require scoping now or a linked follow-up ticket with a deadline.
+Any comment or PR description saying permissions will be tightened in a future PR is a red flag. Temporary permissions become permanent. Require scoping now, or a linked follow-up ticket with a deadline.

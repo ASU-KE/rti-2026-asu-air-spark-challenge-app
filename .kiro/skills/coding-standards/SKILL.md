@@ -165,17 +165,15 @@ Organize by feature/domain, with many small focused files.
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes
-│   ├── markets/           # Market pages
-│   └── (auth)/           # Auth pages (route groups)
-├── components/            # React components
+├── main.tsx              # App entry
+├── routes/               # Route components / pages
+├── components/           # React components
 │   ├── ui/               # Generic UI components
 │   ├── forms/            # Form components
 │   └── layouts/          # Layout components
 ├── hooks/                # Custom React hooks
 ├── lib/                  # Utilities and configs
-│   ├── api/             # API clients
+│   ├── api/             # API clients (FastAPI backend)
 │   ├── utils/           # Helper functions
 │   └── constants/       # Constants
 ├── types/                # TypeScript types
@@ -276,15 +274,13 @@ export function Dashboard() {
 
 ### Database Queries
 
-```typescript
-// PASS: GOOD: Select only needed columns
-const { data } = await supabase
-  .from("markets")
-  .select("id, name, status")
-  .limit(10);
+```python
+# PASS: GOOD: Select only the needed columns
+stmt = select(Market.id, Market.name, Market.status).limit(10)
+rows = (await session.execute(stmt)).all()
 
-// FAIL: BAD: Select everything
-const { data } = await supabase.from("markets").select("*");
+# FAIL: BAD: Load whole entities when only three columns are used
+markets = (await session.execute(select(Market))).scalars().all()
 ```
 
 ## Testing Standards

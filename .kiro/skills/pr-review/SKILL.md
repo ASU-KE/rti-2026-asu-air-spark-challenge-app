@@ -49,22 +49,22 @@ Apply each lens in order. Stop and ask questions when something is unclear.
 ## Security & Least Privilege
 
 - Every permission must justify its existence
-- No wildcard (`*`) actions or resources when specific scopes are available
-- Use purpose-built roles over broad ones — question reaching for higher privilege
-- Secrets and credential paths must be explicitly enumerated, never wildcarded
-- Sensitive data stores (billing, PII, auth) require access logging
-- Security group rules should be minimal — flag rules that aren't needed for the current architecture
+- Prefer predefined or custom GCP roles scoped to need over primitive `roles/owner`/`roles/editor` — question reaching for higher privilege
+- Use a dedicated service account per workload, not the default compute SA; use Workload Identity Federation, not exported keys
+- Secrets come from Secret Manager or injected env, never hardcoded; keep them out of logs and error responses
+- Sensitive data stores (PII, auth, billing) require access logging
+- VPC firewall and Ingress rules should be minimal — flag anything world-open (`0.0.0.0/0`) that isn't 443 behind a load balancer
+- For a deeper auth / secrets / IAM / network audit, hand off to the `security-review` skill
 
-## Infrastructure / IaC
+## Infrastructure / IaC (Terraform on GCP)
 
-- Modules must come from the private registry, not git URLs
-- Required org modules (product-tags) must be present *and actually used*
-- Pre-commit hooks must be pinned (`--freeze`) — no floating revisions
+- Pin providers and modules to explicit versions — no floating `ref=main` or unpinned registry versions
 - Reference resources directly for implicit dependencies rather than string-key lookups
 - Variables need sensible defaults and validation for dependent configurations
-- Plans must show the resource converging — if it's missing from the plan, something is wrong
-- Deprecated modules/patterns are blockers, not warnings
-- State backend config must follow org naming conventions
+- `terraform plan` must show the resource converging — if it's missing from the plan, something is wrong
+- Deprecated modules or patterns are blockers, not warnings
+- State lives in a GCS backend with versioning and uniform bucket-level access; mark sensitive outputs `sensitive = true`
+- For GCP infra architecture and provider-schema judgment, defer to the `google-cloud-engineer` agent
 
 ## Pattern Recognition
 
@@ -125,7 +125,7 @@ When you're unsure about a pattern, convention, or whether something is correct 
 
 - Read the repo's README, AGENTS.md, and steering files for project conventions
 - Check existing code in the repo for established patterns
-- Look up official documentation (AWS docs, Terraform registry, provider docs) to verify claims
+- Look up official documentation (Google Cloud docs, Terraform registry, provider docs) to verify claims
 - Review the PR's linked ticket or story for context on intent
 - Only ask the user when you've exhausted available sources and the question is genuinely unresolvable from documentation
 

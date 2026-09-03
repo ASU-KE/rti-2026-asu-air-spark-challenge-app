@@ -64,41 +64,10 @@ High-frequency updates shared across the tree?
   -> external store (Zustand, Jotai, Redux Toolkit)
 
 Derived from a server?
-  -> server-state library (TanStack Query, SWR, RSC fetch)
+  -> server-state library (TanStack Query, SWR)
 ```
 
 Most pages do not need context or a global store. Resist abstraction until duplicated lifting becomes painful.
-
-## Server / Client Components (RSC)
-
-```tsx
-// Server Component - default, async, never ships JS for itself
-export default async function ProductPage({ params }: { params: { id: string } }) {
-  const product = await db.product.findUnique({ where: { id: params.id } });
-  if (!product) notFound();
-  return <ProductView product={product} />;
-}
-
-// Client Component - opt in with "use client"
-"use client";
-export function AddToCartButton({ productId }: { productId: string }) {
-  const [pending, startTransition] = useTransition();
-  return (
-    <button
-      disabled={pending}
-      onClick={() => startTransition(() => addToCart(productId))}
-    >
-      {pending ? "Adding..." : "Add to cart"}
-    </button>
-  );
-}
-```
-
-Boundaries:
-
-- Server -> Client: pass serializable props or `children`
-- Client -> Server: invoke Server Actions via `<form action={...}>` or imperatively from event handlers
-- Compose a Server Component into a Client Component via `children` — never `import` one directly across the boundary
 
 ## Suspense + Error Boundaries
 
@@ -119,17 +88,15 @@ Boundaries:
 ### React 19 form actions (preferred for new code)
 
 ```tsx
-"use client";
 import { useActionState } from "react";
 
 const initial = { error: null as string | null };
 
 async function updateUserAction(_prev: typeof initial, formData: FormData) {
-  "use server";
   const parsed = UserSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Invalid input" };
-  await db.user.update({ where: { id: parsed.data.id }, data: parsed.data });
-  return { error: null };
+  const res = await api.updateUser(parsed.data);
+  return { error: res.ok ? null : "Update failed" };
 }
 
 export function UserForm() {
@@ -156,7 +123,6 @@ For multi-step forms, dynamic field arrays, or cross-field validation, use a lib
 
 | Need | Tool |
 |---|---|
-| Per-request data in Next.js App Router | RSC `await fetch()` |
 | Client-side cache + mutations + invalidation | TanStack Query |
 | Lightweight client cache + revalidation | SWR |
 | Real-time subscriptions | Server-Sent Events, WebSockets, or the lib's subscription API |
@@ -240,15 +206,13 @@ Wrap a component in `React.memo` only when all three hold — if any fails, skip
 
 ## Scope
 
-Router-agnostic: the patterns here work with React Router, TanStack Router, Next.js App Router, and Remix Router. Router-specific concerns layer on top of React core and follow the router's own docs:
+Router-agnostic: the patterns here work with React Router and TanStack Router. Router-specific concerns layer on top of React core and follow the router's own docs.
 
-- **Next.js specifics** (App Router data loading, Route Handlers, Middleware, Parallel Routes) — Next.js docs
-- **Remix** (loader/action conventions, overlapping with RSC) — Remix docs
 - **React Native** — platform patterns differ enough to warrant a separate `react-native-patterns` skill (not present yet)
 
 ## Related
 
 - Worked examples: [EXAMPLES.md](EXAMPLES.md) — debounced-search hook, `useOptimistic`, context splitting
-- Skills: [react-performance](../react-performance/SKILL.md) for the Vercel-derived performance ruleset, [frontend-patterns](../frontend-patterns/SKILL.md) for cross-framework UI concerns, [accessibility](../accessibility/SKILL.md)
+- Skills: [react-performance](../react-performance/SKILL.md) for the performance ruleset, [frontend-patterns](../frontend-patterns/SKILL.md) for the UI cookbook (forms, animation, state wiring), [accessibility](../accessibility/SKILL.md)
 - Agents: `react-reviewer` for code review, `react-build-resolver` for build/bundler errors
 - Commands: `/react-review`, `/react-build`, `/react-test`

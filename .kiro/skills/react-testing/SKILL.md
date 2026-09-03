@@ -22,7 +22,7 @@ The implementation details a test should stay out of — component state, props 
 | Runner | When | Note |
 |---|---|---|
 | **Vitest** | Vite, Remix, modern setups | Faster, native ESM, Jest-compatible API |
-| **Jest** | Next.js, CRA, established repos | Default for many React projects |
+| **Jest** | Established repos, existing Jest setups | Mature, broad ecosystem |
 | **Playwright Component Testing** | Real browser engine needed | Use when JSDOM lacks the required feature |
 | **Cypress Component Testing** | Real browser, Cypress already in use | Alternative to Playwright CT |
 

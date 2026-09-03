@@ -34,7 +34,6 @@ function SearchBox() {
 ## Optimistic UI with React 19 `useOptimistic`
 
 ```tsx
-"use client";
 import { useOptimistic } from "react";
 
 export function MessageList({ messages }: { messages: Message[] }) {

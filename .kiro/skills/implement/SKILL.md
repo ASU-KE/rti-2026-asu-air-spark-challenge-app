@@ -10,6 +10,4 @@ TDD is mandatory. Build every change test-first with the `/tdd` skill: agree the
 
 Run typechecking regularly, single test files regularly, and the full test suite once at the end.
 
-Once done, use /code-review to review the work.
-
-Commit your work to the current branch.
+Ship each slice through the delivery pipeline in the `git-workflow` skill: atomic commits across the red → green loop, then `/code-review` and — when the slice touches auth, secrets, input, or data — `/security-review`, and finally one small, readable PR per slice targeting `main`. Never a monolithic PR.
