@@ -30,7 +30,8 @@ Break the work into **tracer bullet** tickets.
 
 - Each slice cuts a narrow but COMPLETE path through every layer (schema, API, UI, tests): vertical, NOT a horizontal slice of one layer
 - A completed slice is demoable or verifiable on its own
-- Each slice is sized to fit in a single fresh context window
+  - Each slice is sized to fit in a single fresh context window
+  - A slice's expected diff should be ≲300 lines (code + tests); if it plausibly cannot fit, split it
 - Any prefactoring should be done first
 
 </vertical-slice-rules>
@@ -95,6 +96,13 @@ The end-to-end behaviour this ticket makes work, from the user's perspective, no
 
 - [ ] Criterion 1
 - [ ] Criterion 2
+
+## Definition of Done
+
+- **Demoable outcome:** [describe what is visibly working]
+- **Verification:** [command or steps to confirm it works]
+- **Not in this slice:** [explicit scope boundaries]
+- **Cardinality:** one ticket = one branch = one PR
 
 ## Blocked by
 

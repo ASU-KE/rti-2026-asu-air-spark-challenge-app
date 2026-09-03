@@ -33,7 +33,10 @@ Look for the originating spec, in this order:
 
 ### 3. Identify the standards sources
 
-Anything in the repo that documents how code should be written, such as `CODING_STANDARDS.md` or `CONTRIBUTING.md`.
+The primary source is the core principles in `AGENTS.md`, supplemented by the relevant coding skills under `.opencode/skills/`:
+
+- For backend work: `coding-standards`, `fastapi-patterns`, `backend-patterns`, `python-patterns`
+- For frontend work: `coding-standards`, `react-patterns`, `frontend-patterns`, `error-handling`
 
 On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
 
@@ -74,6 +77,17 @@ If the spec is missing, skip the Spec sub-agent and note this in the final repor
 ### 5. Aggregate
 
 Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
+
+### Blockers — must fix before requesting human review:
+- Correctness bugs
+- Security issues
+- Broken contracts
+- Hard violations of repo standards
+- Any Spec-axis deviation from the originating ticket/spec
+
+### Advisory — note, never blocks:
+- Judgement-call Fowler smells
+- Style preferences
 
 End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
 

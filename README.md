@@ -65,9 +65,9 @@ Discovery and rigorous questioning
   → Technical specification
   → Small, dependency-aware feature tickets
   → Test-driven implementation
-  → Agentic and adversarial code review
-  → Pull-request review and approval
-  → Integration into staging
+  → /code-review (mandatory gate) + /security-review (when the slice touches auth/secrets/input/data) + /adversarial-code-review (opt-in, high-risk slices)
+    → Pull-request review and approval
+    → Merge into `main`
 ```
 
 ### Practices we intend to exercise
@@ -78,7 +78,7 @@ Discovery and rigorous questioning
 - **Test-driven development:** Use a red/green workflow and select unit, integration, contract, and end-to-end tests according to the risk of each feature.
 - **Reproducible local development:** Provide the services, seed data, migrations, observability, API specifications, and sandboxing needed to validate changes reliably.
 - **Independent review:** Apply code-review, pull-request-review, security-review, and adversarial-review practices against predeclared acceptance criteria.
-- **Controlled integration:** Develop each work item on a feature branch, require a pull request, and integrate reviewed work through a staging branch.
+- **Controlled integration:** Develop each work item on a feature branch, require a pull request, and integrate reviewed work through a pull request into `main`.
 - **Multi-agent coordination:** Explore ticket claims, dependency tracking, branch synchronization, and other controls that allow several developers and agents to contribute safely in parallel.
 
 ### aSDLC outputs
@@ -90,7 +90,7 @@ Beyond the application itself, we intend to produce:
 - Recommendations for effective developer-agent collaboration.
 - A draft set of RTO Agentic SDLC Standards for further evaluation and refinement.
 
-The current workflow notes are in [`docs/planning/goal-design-agent-sdlc-worfklow.md`](docs/planning/goal-design-agent-sdlc-worfklow.md).
+The current workflow notes are in [`docs/planning/agent-sdlc-workflow.md`](docs/planning/agent-sdlc-workflow.md).
 
 ## What success looks like
 

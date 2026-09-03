@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Determine changed files
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - '**/*.py'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'requirements*.txt'
+            frontend:
+              - '**/*.{ts,tsx}'
+              - 'package.json'
+              - 'bun.lock'
+              - 'tsconfig*.json'
+      outputs:
+        backend: ${{ steps.filter.outputs.backend }}
+        frontend: ${{ steps.filter.outputs.frontend }}
+
+  backend-tests:
+    name: Backend (pytest)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - id: guard
+        name: Check for pyproject.toml
+        run: |
+          if [ ! -f pyproject.toml ]; then
+            echo "No Python project yet — skipping"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+      - name: Set up Python via uv
+        if: steps.guard.outputs.run == 'true'
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        if: steps.guard.outputs.run == 'true'
+        run: uv sync
+      - name: Run tests
+        if: steps.guard.outputs.run == 'true'
+        run: uv run pytest -x -q
+
+  frontend:
+    name: Frontend (typecheck + lint + test)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - id: guard
+        name: Check for package.json
+        run: |
+          if [ ! -f package.json ]; then
+            echo "No frontend project yet — skipping"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+      - name: Set up Bun
+        if: steps.guard.outputs.run == 'true'
+        uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        if: steps.guard.outputs.run == 'true'
+        run: bun install --frozen-lockfile
+      - name: Typecheck
+        if: steps.guard.outputs.run == 'true'
+        run: bun run typecheck
+      - name: Lint
+        if: steps.guard.outputs.run == 'true'
+        run: bun run lint
+      - name: Test
+        if: steps.guard.outputs.run == 'true'
+        run: bun test

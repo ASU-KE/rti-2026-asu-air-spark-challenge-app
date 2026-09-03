@@ -33,13 +33,4 @@ Create a GitHub issue.
 
 Run `gh issue view <number> --comments`.
 
-## Wayfinding operations
 
-Used by `/wayfinder`. The map is a single issue with child issues as tickets.
-
-- **Map**: an issue labelled `wayfinder:map`, holding Notes, Decisions-so-far, and Fog.
-- **Child ticket**: a GitHub sub-issue linked to the map. Where sub-issues are unavailable, add the child to a task list in the map and place `Part of #<map>` at the top of the child body. Use a `wayfinder:<type>` label.
-- **Blocking**: use GitHub’s native issue dependencies. Where unavailable, use a `Blocked by: #<n>, #<n>` line.
-- **Frontier query**: choose the first open, unblocked, unassigned child in map order.
-- **Claim**: `gh issue edit <n> --add-assignee @me`
-- **Resolve**: comment with the answer, close the ticket, and append a context pointer to the map’s Decisions-so-far.

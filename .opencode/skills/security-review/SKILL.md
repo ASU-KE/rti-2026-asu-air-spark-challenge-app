@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Focused security audit on PRs touching authentication, authorization, secrets, input handling, GCP IAM, or GKE networking. Use when a security review is explicitly requested, or when changes involve permissions, network exposure, or credential handling.
+description: Focused security audit on PRs touching authentication, authorization, secrets, input handling, or data. Use when a security review is explicitly requested, or when changes involve permissions, credential handling, or data boundaries.
 ---
 
 ## When to Activate
@@ -8,20 +8,21 @@ description: Focused security audit on PRs touching authentication, authorizatio
 This skill goes deeper than the security lens in pr-review. Use it when a PR:
 - Changes authentication or authorization (FastAPI auth dependencies, JWT/session handling, React route or action guards)
 - Handles secrets, credentials, or API keys
-- Adds or changes GCP IAM roles, bindings, or service accounts
-- Modifies GKE networking, VPC firewall rules, or Ingress/Gateway exposure
+
 - Touches input boundaries (request bodies, query params, uploads) or database queries
 - A reviewer explicitly requests a security-focused review
 
 ## Before Asking the User
 
 Search for answers in official documentation first:
-- Google Cloud IAM docs for role/binding evaluation and Workload Identity Federation
-- FastAPI security docs (OAuth2, dependencies) and OWASP references for app-layer issues
-- The repo's existing auth, secrets, and IAM patterns
-- The GKE hardening guide for cluster and workload settings
+ - FastAPI security docs (OAuth2, dependencies) and OWASP Top 10 / ASVS for app-layer issues
+ - The repo's existing auth and secrets patterns
 
 ## Review Process
+
+### Cloud Deployment Scope
+
+> ⚠️ Cloud deployment is out of scope for the prototype (see `docs/planning/application-requirements.md`). This review covers local-only execution. If cloud deployment becomes in-scope, re-derive cloud-specific checks (IAM least privilege, network exposure).
 
 ### 1. Run Secrets Detection
 
@@ -49,43 +50,22 @@ This scans the current branch diff for leaked secrets, API keys, tokens, and cre
 
 ### 4. Secrets & Credential Handling
 
-- Are secrets fetched at runtime from Secret Manager (or injected env), never hardcoded or committed?
-- Is Workload Identity Federation used for GKE workloads and external CI/CD, instead of long-lived service-account keys?
-- Are required secrets validated at startup and kept out of logs and error responses?
+- Are secrets and credentials provided via environment variables at runtime, never hardcoded in source or committed to the repo?
+- Are all required credentials validated at application startup, with a clear error if missing?
+- Are secrets and credentials kept out of logs, console output, and error responses?
 
-### 5. GCP IAM Least Privilege
+### 5. Blast Radius Assessment
 
-For every IAM role or binding in the diff:
-
-- **Roles:** A predefined or custom role scoped to need — not a primitive `roles/owner`, `roles/editor`, or `roles/viewer`?
-- **Members:** A dedicated least-privilege service account per workload — not the default compute SA or a user account?
-- **Scope:** Granted at the narrowest resource (bucket, dataset, topic, secret) rather than the whole project?
-- **Keys:** No exported service-account keys where Workload Identity Federation would work?
-- **`iam.serviceAccountUser` / `actAs`:** Granted only where impersonation is genuinely required?
-
-See `references/iam-anti-patterns.md` for common over-permissive patterns and their fixes.
-
-### 6. GKE & Network Exposure
-
-- Is anything exposed publicly that shouldn't be — a `LoadBalancer` Service or an Ingress without authentication?
-- Do VPC firewall rules avoid `0.0.0.0/0` except on 443 behind a managed load balancer? SSH and database ports are never world-open.
-- Are databases reachable only privately (Private Service Connect or authorized networks), never via public IP?
-- Are workloads least-privileged: non-root, read-only root filesystem, dropped capabilities, and a `NetworkPolicy` in place?
-
-See `references/network-baseline.md` for acceptable ports, sources, and per-environment rules.
-
-### 7. Blast Radius Assessment
-
-- What is the worst case if this route, credential, or role is abused?
-- Can the identity pivot to other services or projects?
-- Is there a fast revoke or rollback path — rotate the secret, remove the binding, disable the route?
+- What is the worst case if this route, credential, or data access is abused?
+- Can the identity or data access pivot to other services or data stores?
+- Is there a fast revoke or rollback path — disable the route, clear the cache, or terminate the session?
 
 ## Response Format
 
 ```
 ## Security Review
 
-**Scope:** [Auth / Input / Secrets / IAM / Network / Mixed]
+**Scope:** [Auth / Input / Secrets / Network / Mixed]
 **Risk Level:** [low / medium / high / critical]
 **Blast Radius:** [single service / project-wide / cross-project]
 
@@ -101,8 +81,8 @@ See `references/network-baseline.md` for acceptable ports, sources, and per-envi
 ### ✅ Security Positives
 - [good practices observed]
 
-### Least-Privilege Recommendation
-[Suggest a scoped-down role/binding using assets/iam-binding-template.tf as a starting point]
+### Hardening recommendations
+- [Specific, actionable suggestions to improve security posture]
 ```
 
 ## Principles

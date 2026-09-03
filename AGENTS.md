@@ -19,3 +19,5 @@ Triage uses five canonical skill labels. See `docs/agents/triage-labels.md`.
 ## Domain docs
 
 This repository uses a single-context domain documentation layout. See `docs/agents/domain.md`.
+
+Delivery: one slice → one branch → one ≤300-line PR to main, TDD atomic commits, review gates before human review — see the delivery pipeline in .opencode/skills/git-workflow.

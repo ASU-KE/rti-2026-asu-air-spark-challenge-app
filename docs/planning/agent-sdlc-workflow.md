@@ -4,6 +4,8 @@ date-created: 2026-08-26
 status: draft
 ---
 
+> **Resolved (2026-09-03):** The workflow questions in this document are now settled. The source of truth for the delivery pipeline is the skills in `.opencode/skills/`: `git-workflow`, `implement`, `to-tickets`, `tdd`, and `code-review`.
+
 # Goal: Design an Enteprise-ready agent Software Development Lifecycle (aSDLC)
 
 The secondary goal for this project is to test an agent-centric software development lifecyle (aSDLC) that can hold up to the demands and quality requirements for RTO mission-critical applications.
@@ -41,11 +43,11 @@ A far more refined and advanced agent harness that we have encountered is [aafan
 ## Work breakdown into Feature-based Slices
 
 - Make sure each slice/ticket is not too large (need definition of too big)
-  - 700 lines?
+  - RESOLVED: ≤300 lines of diff (code + tests), hard cap; over the cap means the ticket was cut too big and goes back to `/to-tickets`.
   - Would need to be context-dependent. But need clear definition for agent steering
   - TODO: lookup how industry leaders have defnined this
 - Each feature/slice is built into its own Feature Branch
-  - Name schema: `feature/[ASURITE]-[Issue Number]-[Issue title]`
+  - Name schema: `feature/<issue>-<slug>` from GitHub Issues (the `feature/[ASURITE]-…` Jira-style scheme is rejected — no such tracker exists).
 
 ## Test Driven Development
 
@@ -79,11 +81,14 @@ A far more refined and advanced agent harness that we have encountered is [aafan
 - PR required at the end of each work item (not just at the end of the development cycle)
   - After the Code Review
   - TODO: Enable GitHub Copilot PR Review
-- Item PRs should merge into a `staging` branch, maybe `feature/[featurename]-[workitem]`
+- ~~Item PRs should merge into a `staging` branch, maybe `feature/[featurename]-[workitem]`~~
+  - RESOLVED: merge into `main` (GitHub Flow); branch schema `feature/<issue>-<slug>` — see the delivery pipeline in `.opencode/skills/git-workflow`.
 - Branch schema
 
 Workflow diagram:
 
-- TDD -> Code Review -> PR -> PR Review/Approval -> merge into `staging` branch
-  - After PR creation and before PR merge: merge `staging` in; bring up-to-date
+- ~~TDD -> Code Review -> PR -> PR Review/Approval -> merge into `staging` branch~~
+  - RESOLVED: merge into `main` (GitHub Flow); the `main` ruleset (in place 2026-09-03) requires 1 human approval, no self-approval, merge-commit only, no force-push — see the delivery pipeline in `.opencode/skills/git-workflow`.
+  - ~~After PR creation and before PR merge: merge `staging` in; bring up-to-date~~
+  - RESOLVED: unnecessary under GitHub Flow to `main`.
   - Can we automate branch syncs during new PR create and before PR merge?

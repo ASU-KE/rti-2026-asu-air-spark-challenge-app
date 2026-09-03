@@ -1,18 +1,19 @@
 ---
 name: adversarial-code-review
-description: Review a PR with two reviewers from different model families that cross-validate each other's findings before synthesis. Use when asked to review a pull or merge request, when a change touches infrastructure, security, IAM, data handling, or cross-service contracts, or when a review needs higher confidence than a single model provides.
+description: Review a PR with two reviewers from different model families that cross-validate each other's findings before synthesis. Use when a change touches authentication, secrets, provider throttling, data integrity, or cross-service contracts, or when a review needs higher confidence than the mandatory /code-review gate provides.
 ---
 
 ## When to Activate
 
-Use this skill for any code-review request that is not trivial. It is the default review workflow — not an opt-in for "important" PRs.
+Use this skill as an opt-in escalation for high-risk slices (authentication, secrets, provider throttling, data integrity, cross-service contracts). It composes ON TOP of the mandatory `/code-review` gate — it never replaces it.
 
 Two reviewers from different model families produce independent reviews, then cross-validate each other's findings, then a cheap model synthesizes the result. Different families catch different blind spots; cross-validation forces each model to explicitly confirm or challenge the other's findings, which produces higher-confidence output than simple reconciliation.
 
 Relationship to sibling skills:
 
-- `pr-review` — single-reviewer 5-Lens framework. Use for a fast pass or when the adversarial pipeline cannot run.
-- `security-review` — deep security audit of IAM, networking, and secrets. Compose with this skill when the diff is security-heavy.
+- `/code-review` — the mandatory gate for every slice. This skill composes ON TOP of it for high-risk changes.
+- `pr-review` — fast pass for non-blocking feedback. Use when you need a quick opinion.
+- `security-review` — deep audit for auth, secrets, and networking. Use when the change is security-heavy; compose with this skill if risk is extreme.
 
 Cross-validation roughly doubles reviewer-tier invocations (each reviewer model runs twice) and adds a serial validation layer before synthesis. That is the cost of higher-confidence findings.
 
@@ -35,25 +36,21 @@ The pipeline below is mechanism. The substance of what to inspect — reading pr
 
 ## Prerequisites
 
-**Model selection for a subagent stage comes from the agent named in `role`, not from the stage's `model` field.** Verified empirically: a stage whose agent pins `"model": "claude-opus-4.6"` runs on that model regardless of the stage's `model` value, and a stage whose agent leaves `"model": null` runs on the global `chat.defaultModel`. In both cases the stage-level `model` field is ignored. Any pipeline that tries to get provider diversity by varying `model` alone will silently run two same-family reviewers.
+This skill requires two models from DIFFERENT provider/model families to be reachable in the opencode model catalog (reviewer A from one family, reviewer B from another). Before starting:
 
-This skill therefore requires three agents to exist in the environment, each pinning a model in its own config:
+1. Consult the opencode model catalog for the session to identify available models.
+2. Verify both reviewer models are reachable and can be invoked.
+3. Confirm reviewer A and reviewer B are from **different providers**. Two same-provider models are a second opinion, not adversarial review — not an acceptable degrade under any circumstance.
 
-| Agent | Purpose | Pinned model |
+The pipeline references three named agents by `role` (configured in the environment; see [references/reviewer-agents.md](references/reviewer-agents.md)):
+
+| Agent | Purpose | Model family |
 |-------|---------|--------------|
-| `code-reviewer-a` | Reviewer A and its validation pass | Current Claude Opus |
-| `code-reviewer-b` | Reviewer B and its validation pass | Strongest available non-Anthropic model |
+| `code-reviewer-a` | Reviewer A and its cross-validation pass | Current Claude Opus (Anthropic) |
+| `code-reviewer-b` | Reviewer B and its cross-validation pass | Strongest available non-Anthropic model |
 | `code-review-synthesizer` | Phase 3 synthesis | Sonnet-class Claude |
 
-Before running the pipeline:
-
-1. `kiro-cli agent list` — check whether the three agents exist. If they do not, create them from the templates in [references/reviewer-agents.md](references/reviewer-agents.md).
-2. `kiro-cli chat --list-models` — resolve the current model in each family (see [Model roster](#model-roster)) and confirm each agent's pinned `model` still points at a live identifier.
-3. Confirm `code-reviewer-a` and `code-reviewer-b` pin models from **different providers**. If no non-Anthropic model can be pinned — none is offered in the catalog, or none is reachable from this account or region — cross-family review is impossible here: use the [single-model fallback](#single-model-fallback) and disclose it.
-
-If `kiro-cli` is unavailable (a different agent harness, or CI), read the agent configs directly from the agent directory instead: each config's `model` field is the authoritative identifier, and the file's presence answers step 1. If neither the CLI nor the configs are reachable, you cannot establish which models the stages will run on — fall back to single-model review and say so rather than assuming the roster held.
-
-Do not substitute an arbitrary local agent for a reviewer slot. General-purpose agents are personal configuration and carry unrelated tool grants, MCP servers, and system prompts; which model they resolve to is not knowable from the skill.
+If no second model family is reachable, adversarial review is not possible in this environment. Fall back to single-model review and disclose that adversarial review was unavailable.
 
 ## Model Roster
 
@@ -63,11 +60,11 @@ Standing pipeline:
 - **Reviewer B** — strongest available non-Anthropic model. Preference order: OpenAI GPT-5.6 Sol → DeepSeek → GLM.
 - **Synthesizer** — a Sonnet-class Claude (fast and cheap; synthesis is structural, not generative).
 
-**Resolve models against the live catalog before spawning — do not trust the identifiers in this document.** Run `kiro-cli chat --list-models` and take the newest version in each family. As of 2026-07 that resolves to `claude-opus-5` (Reviewer A), `gpt-5.6-sol` (Reviewer B), and `claude-sonnet-5` (synthesizer), with `deepseek-3.2` and `glm-5` as Reviewer B fallbacks. If credit cost matters more than review depth on a given PR, `gpt-5.6-terra` (roughly half the rate of Sol) or `deepseek-3.2` are acceptable Reviewer B substitutions — note the substitution in the summary.
+**Resolve models against the live catalog before spawning — do not trust the identifiers in this document.** Consult the opencode model catalog and take the newest version in each family. As of 2026-07 that resolves to `claude-opus-5` (Reviewer A), `gpt-5.6-sol` (Reviewer B), and `claude-sonnet-5` (synthesizer), with `deepseek-3.2` and `glm-5` as Reviewer B fallbacks. If credit cost matters more than review depth on a given PR, `gpt-5.6-terra` (roughly half the rate of Sol) or `deepseek-3.2` are acceptable Reviewer B substitutions — note the substitution in the summary.
 
 **Review and cross-validation stages must use the latest available version in each reviewer family** (the strongest models do the original judgment and the challenge). A family's validation stage uses the same version as that family's review stage. **The synthesizer does not need the latest version** — any available Sonnet-class model works, since its job is structural reconciliation rather than original review.
 
-Set each model in the corresponding agent's config (`kiro-cli agent edit <name>`), not in the pipeline JSON. The `subagent` tool's stage-level `model` field is ignored; `role` is the only lever that changes the backing model.
+Record/pin the selected model IDs in the corresponding agent's config (see `references/reviewer-agents.md`), not in the pipeline JSON. The `subagent` tool's stage-level `model` field is ignored; `role` is the only lever that changes the backing model.
 
 **Attribution strings come from the agent configs, never from the model's self-report.** A model cannot reliably name its own version, because the version it is serving usually postdates its training data — a stage pinned to `claude-opus-5` self-reported "Claude Opus 4.5" and asserted that no Opus 5 exists. Read the pinned `model` from each agent config before Phase 1 and interpolate those identifiers into the prompts as `<<model_a>>`, `<<model_b>>`, and `<<model_synth>>`, exactly like prior-stage outputs. Reviewer prompts instruct the model to emit the supplied string verbatim rather than describing itself.
 
@@ -77,7 +74,7 @@ Set each model in the corresponding agent's config (`kiro-cli agent edit <name>`
 
 Verify provider diversity against the two agent configs before spawning, not against the attribution lines afterward — self-reports cannot distinguish a misrouted stage from a model that simply misidentifies itself. If both agents resolve to the same provider, the run is invalid: fix the configs and re-run rather than posting the result.
 
-This skill invokes `kiro-cli chat --list-models`, `kiro-cli agent list`, and `kiro-cli agent edit`; everything else runs through agent tools. Keep it that way — no shell scripts, no absolute paths, no platform-specific tooling — so the skill works on Linux, macOS, and Windows alike.
+This skill consults the opencode model catalog, verifies agent configurations, and pins model IDs (see `references/reviewer-agents.md`); everything else runs through agent tools. Keep it that way — no shell scripts, no absolute paths, no platform-specific tooling — so the skill works on Linux, macOS, and Windows alike.
 
 ## Pipeline
 
@@ -126,13 +123,13 @@ Replace `<<reviewer_a output>>` and `<<reviewer_b output>>` with the verbatim Ph
   "stages": [
     {
       "name": "validate_a",
-      "role": "code-reviewer-a",
-      "prompt_template": "Two independent code reviews of {task} were produced.\n\nReview from Reviewer A:\n<<reviewer_a output>>\n\nReview from Reviewer B:\n<<reviewer_b output>>\n\nYou are Reviewer A. Cross-validate Reviewer B's findings:\n1. **Agree** — which of Reviewer B's findings do you confirm as valid? Briefly state why.\n2. **Disagree** — which of Reviewer B's findings are incorrect, overstated, or based on a misreading? Cite the code or docs that support your position.\n3. **Missed** — valid issues Reviewer B caught that you missed.\n4. **Retract** — items from your own review you now believe are wrong after seeing Reviewer B's perspective.\n\nBe specific. Cite file:line references. Read the diff again where a finding turns on what the code actually does. Do not add new findings — only validate or challenge existing ones."
+       "role": "code-reviewer-a",
+       "prompt_template": "Two independent code reviews of {task} were produced.\n\nReview from Reviewer A:\n<<reviewer_a output>>\n\nReview from Reviewer B:\n<<reviewer_b output>>\n\nYou are Reviewer A. Cross-validate Reviewer B's findings:\n1. **Agree** — which of Reviewer B's findings do you confirm as valid? Briefly state why.\n2. **Disagree** — which of Reviewer B's findings are incorrect, overstated, or based on a misreading? Cite the code or docs that support your position.\n3. **Missed** — valid issues Reviewer B caught that you missed.\n4. **Retract** — items from your own review you now believe are wrong after seeing Reviewer B's perspective.\n\nBe specific. Cite file:line references. Read the diff again where a finding turns on what the code actually does. Do not add new findings — only validate or challenge existing ones."
     },
     {
       "name": "validate_b",
-      "role": "code-reviewer-b",
-      "prompt_template": "Two independent code reviews of {task} were produced.\n\nReview from Reviewer A:\n<<reviewer_a output>>\n\nReview from Reviewer B:\n<<reviewer_b output>>\n\nYou are Reviewer B. Cross-validate Reviewer A's findings:\n1. **Agree** — which of Reviewer A's findings do you confirm as valid? Briefly state why.\n2. **Disagree** — which of Reviewer A's findings are incorrect, overstated, or based on a misreading? Cite the code or docs that support your position.\n3. **Missed** — valid issues Reviewer A caught that you missed.\n4. **Retract** — items from your own review you now believe are wrong after seeing Reviewer A's perspective.\n\nBe specific. Cite file:line references. Read the diff again where a finding turns on what the code actually does. Do not add new findings — only validate or challenge existing ones."
+       "role": "code-reviewer-b",
+       "prompt_template": "Two independent code reviews of {task} were produced.\n\nReview from Reviewer A:\n<<reviewer_a output>>\n\nReview from Reviewer B:\n<<reviewer_b output>>\n\nYou are Reviewer B. Cross-validate Reviewer A's findings:\n1. **Agree** — which of Reviewer A's findings do you confirm as valid? Briefly state why.\n2. **Disagree** — which of Reviewer A's findings are incorrect, overstated, or based on a misreading? Cite the code or docs that support your position.\n3. **Missed** — valid issues Reviewer A caught that you missed.\n4. **Retract** — items from your own review you now believe are wrong after seeing Reviewer A's perspective.\n\nBe specific. Cite file:line references. Read the diff again where a finding turns on what the code actually does. Do not add new findings — only validate or challenge existing ones."
     }
   ]
 }

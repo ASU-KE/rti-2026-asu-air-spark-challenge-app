@@ -13,11 +13,11 @@ For Git configuration, aliases, ignore rules, and hooks, see [`CONFIG-AND-HOOKS.
 
 How a `to-tickets` vertical slice reaches `main`. The rule is **one slice, one short-lived branch, one small PR** — readability by a human reviewer is the bar, and it outranks batching for speed. No monolithic PRs.
 
-1. **Branch per slice.** Cut `feature/<slice>` from `main` (GitHub Flow, below). A slice is sized to one fresh context window (`to-tickets`), so its branch lives a day or two, not weeks.
+1. **Branch per slice.** Cut `feature/<issue>-<slug>` from `main` (GitHub Flow, below). A slice is sized to one fresh context window (`to-tickets`), so its branch lives a day or two, not weeks.
 2. **Atomic commits track the red → green loop.** Each commit is one coherent step that builds and passes on its own (`tdd`): the failing `test:`, the `feat:`/`fix:` that greens it, an optional `refactor:`. One logical change per commit — never fold a refactor into a feature. Atomic commits let a reviewer read the slice as a story.
-3. **Two review gates before the PR is ready.** Once the slice is green, run `/code-review` (Standards + Spec), then `/security-review` when the slice touches auth, secrets, input boundaries, or data access (skip only when none apply, and say so). Clear blockers before requesting human review.
-4. **Open one small PR to `main`.** Keep the diff readable in a single sitting — well under ~400 lines; if it grows past that, the slice was too big, so split it. Fill the PR template below, link the ticket, and require green CI (tests, lint, typecheck). Manage the PR with `github-ops`.
-5. **Merge and delete the branch.** Keep the atomic history when each commit stands alone; squash only a messy branch. Deploy from `main`.
+3. **Two review gates before the PR is ready.** Once the slice is green, run `/code-review` (Standards + Spec), then `/security-review` when the slice touches auth, secrets, input boundaries, or data access (skip only when none apply, and say so). Clear blockers before requesting human review. CI must be green before requesting human review (advisory — no required status checks). Pushes dismiss approvals, so request review on the final push.
+4. **Open one small PR to `main`.** Keep the diff readable in a single sitting — ≤300 lines of code and tests; if it grows past that, the slice was too big, so split it via `/to-tickets`. Fill the PR template below, link the ticket, and require green CI (tests, lint, typecheck). Manage the PR with `github-ops`.
+5. **Merge and delete the branch.** Keep the atomic history when each commit stands alone; the `main` ruleset allows merge commits only, so squash is not an option. Deploy from `main`.
 
 **Integration branch — only when a slice can't stay green alone.** The default is slice → PR → `main`. When `to-tickets` sequenced batches that promise green only together (a wide refactor's expand–contract, or slices that must assemble before end-to-end coverage is meaningful), point those PRs at a shared integration branch instead of `main`, run the full Playwright suite there (`e2e-testing`), and merge the integration branch to `main` in one reviewed PR once green. This keeps `main` deployable while still allowing e2e across the assembled slices.
 
@@ -39,7 +39,7 @@ main (protected, always deployable)
 - `main` is always deployable
 - Create feature branches from `main`
 - Open Pull Request when ready for review
-- After approval and CI passes, merge to `main`
+ - After 1 human approval (author/agent cannot self-approve), merge to `main` using a merge commit (squash and rebase merges disabled); no force-push; no branch deletion; org admins may bypass
 - Deploy immediately after merge
 
 ### Trunk-Based Development (High-Velocity Teams)
@@ -154,6 +154,10 @@ Create `.gitmessage` in repo root:
 
 Enable with: `git config commit.template .gitmessage`
 
+### AI-Assisted Commits
+
+AI-assisted commits include a `Co-authored-by:` trailer naming the harness and model (e.g. `Co-authored-by: OpenCode <model>`). Record the actual model used — do not guess.
+
 ## Merge vs Rebase
 
 ### Merge (Preserves History)
@@ -227,41 +231,7 @@ docs(api): add OpenAPI specification for v2 endpoints
 
 ### PR Description Template
 
-```markdown
-## What
-
-Brief description of what this PR does.
-
-## Why
-
-Explain the motivation and context.
-
-## How
-
-Key implementation details worth highlighting.
-
-## Testing
-
-- [ ] Unit tests added/updated
-- [ ] Integration tests added/updated
-- [ ] Manual testing performed
-
-## Screenshots (if applicable)
-
-Before/after screenshots for UI changes.
-
-## Checklist
-
-- [ ] Code follows project style guidelines
-- [ ] Self-review completed
-- [ ] Comments added for complex logic
-- [ ] Documentation updated
-- [ ] No new warnings introduced
-- [ ] Tests pass locally
-- [ ] Related issues linked
-
-Closes #123
-```
+See `.github/PULL_REQUEST_TEMPLATE.md`. It contains: What, Why, How, Testing, Screenshots (if applicable), Checklist, linked ticket, ≤300-lines checkbox, and `Closes #<n>`.
 
 ### Code Review Checklist
 
@@ -274,13 +244,14 @@ Work each box; the review is done only when every item below is checked or expli
 - [ ] Is the code readable and maintainable?
 - [ ] Are there sufficient tests?
 - [ ] Are there security concerns?
-- [ ] Is the commit history clean (squashed if needed)?
+ - [ ] Does the commit history read as a story (one logical change per commit)?
 
 **For Authors:**
 
-- [ ] Self-review completed before requesting review
-- [ ] CI passes (tests, lint, typecheck)
-- [ ] PR size is reasonable (<500 lines ideal)
+  - [ ] Self-review completed before requesting review
+  - [ ] CI passes (tests, lint, typecheck)
+  - [ ] PR size is ≤300 lines of code and tests
+  - [ ] AI commits carry a `Co-authored-by` trailer
 - [ ] Related to a single feature/fix
 - [ ] Description clearly explains the change
 
