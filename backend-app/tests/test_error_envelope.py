@@ -61,3 +61,25 @@ def _probe_client() -> Iterator[TestClient]:
 
     with TestClient(app) as test_client:
         yield test_client
+
+
+
+def test_unexpected_failure_returns_a_generic_error_envelope() -> None:
+    app = create_app()
+    leaky_message = "connect failed for key sk-provider-do-not-leak"
+
+    @app.get("/api/_explode")
+    def explode() -> None:
+        raise RuntimeError(leaky_message)
+
+    # Let the app answer instead of re-raising, as it would in production.
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.get("/api/_explode")
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "success": False,
+        "data": None,
+        "error": "Internal server error",
+    }
+    assert leaky_message not in response.text
