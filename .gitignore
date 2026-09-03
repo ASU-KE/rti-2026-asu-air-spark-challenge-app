@@ -3,6 +3,7 @@
 # Secrets — never commit
 .env
 .env.*
+!**/.env.example
 **/.npmrc
 !**/.npmrc.example
 .asu-npm-token
@@ -13,3 +14,11 @@ node_modules/
 frontend-app/dist/
 frontend-app/coverage/
 *.tsbuildinfo
+
+# Python / backend build artifacts
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
