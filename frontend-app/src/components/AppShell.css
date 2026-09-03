@@ -1,97 +1,8 @@
-/* ASU brand palette (Unity Design System). */
-:root {
-  --asu-maroon: #8c1d40;
-  --asu-gold: #ffc627;
-  --asu-gray-7: #191919;
-  --asu-gray-2: #d0d0d0;
-  --asu-white: #fff;
-}
-
-/* Branded banner header, themed to the ASU Unity Design System. */
-.app-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.75rem 1.5rem;
-  padding: 0.75rem 1rem;
-  background: var(--asu-gray-7);
-  color: var(--asu-white);
-}
-
-.app-banner__brand {
-  color: var(--asu-gold);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.app-banner__brand:focus-visible {
-  outline: 2px solid var(--asu-gold);
-  outline-offset: 2px;
-}
-
-.app-banner__wordmark {
-  font-size: 1.125rem;
-  letter-spacing: 0.02em;
-}
-
-.app-banner__title {
-  margin: 0;
-  padding-left: 1.5rem;
-  border-left: 2px solid var(--asu-gold);
-  font-size: 1rem;
-  font-weight: 400;
-  color: var(--asu-white);
-}
-
-/* Keyboard skip link: visible only when focused. */
-.skip-link {
-  position: absolute;
-  left: -999px;
-  top: 0;
-  z-index: 100;
-  padding: 0.5rem 1rem;
-  background: var(--asu-maroon);
-  color: var(--asu-white);
-}
-
-.skip-link:focus {
-  left: 0;
-}
-
-.primary-nav {
-  background: var(--asu-maroon);
-  border-bottom: 4px solid var(--asu-gold);
-}
-
-.primary-nav__list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin: 0;
-  padding: 0 1rem;
-  list-style: none;
-}
-
-.primary-nav__link {
-  display: inline-block;
-  padding: 0.85rem 1rem;
-  color: var(--asu-white);
-  font-weight: 700;
-  text-decoration: none;
-  border-bottom: 4px solid transparent;
-}
-
-.primary-nav__link:hover,
-.primary-nav__link:focus-visible {
-  background: rgb(255 255 255 / 12%);
-  outline: 2px solid var(--asu-gold);
-  outline-offset: -2px;
-}
-
-.primary-nav__link--active {
-  border-bottom-color: var(--asu-gold);
-}
-
+/*
+ * Layout for the routed screen content. The banner, navigation, and skip link
+ * are supplied by the ASU Unity global header, so the shell only styles the
+ * `main` region and the screen placeholders.
+ */
 .app-main {
   max-width: 60rem;
   margin: 0 auto;
@@ -99,6 +10,6 @@
 }
 
 .page-placeholder__status {
-  color: var(--asu-gray-7);
+  color: #191919;
   font-style: italic;
 }
