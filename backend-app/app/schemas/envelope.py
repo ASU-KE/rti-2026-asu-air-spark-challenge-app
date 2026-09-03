@@ -37,3 +37,8 @@ class Envelope(BaseModel, Generic[PayloadT]):
 def ok(data: PayloadT) -> Envelope[PayloadT]:
     """Wrap a successful payload."""
     return Envelope(success=True, data=data, error=None)
+
+
+def failed(message: str) -> Envelope[None]:
+    """Wrap a user-friendly failure message, with no payload."""
+    return Envelope(success=False, data=None, error=message)
