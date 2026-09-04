@@ -1,1 +1,15 @@
 .DS_Store
+
+# Secrets — never commit
+.env
+.env.*
+**/.npmrc
+!**/.npmrc.example
+.asu-npm-token
+
+# Node / frontend build artifacts
+node_modules/
+**/node_modules/
+frontend-app/dist/
+frontend-app/coverage/
+*.tsbuildinfo
