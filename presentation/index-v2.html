@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>AIRgents of Change — ASU AIR Spark Challenge 2026</title>
+  <!--
+    Seven-slide, five-minute hackathon presentation.
+    Self-contained: no external fonts, styles, scripts, or images.
+    Keyboard: Left/Right, Page Up/Down, Space, Home/End, F for fullscreen.
+    ASU Unity tokens verified against ASU/asu-unity-stack on 2026-09-03.
+  -->
+  <style>
+    :root {
+      --maroon: #8c1d40;
+      --darkmaroon: #440e22;
+      --gold: #ffc627;
+      --darkgold: #7f6227;
+      --white: #ffffff;
+      --gray-1: #191919;
+      --gray-2: #484848;
+      --gray-3: #747474;
+      --gray-4: #bfbfbf;
+      --gray-5: #d0d0d0;
+      --gray-6: #e8e8e8;
+      --gray-7: #fafafa;
+      --blue: #00a3e0;
+      --blue-dark: #006f99;
+      --blue-focus: #00baff;
+      --green: #78be20;
+      --green-dark: #446d12;
+      --orange: #ff7f32;
+      --orange-dark: #a8430f;
+      --error: #cc2f2f;
+      --error-bg: #f7dddd;
+      --warning-bg: #ffeade;
+      --info-bg: #d6f0fa;
+      --success-bg: #e9f5db;
+      --footer: #1e1e1e;
+      --footer-divider: #393939;
+      --font: Arial, Helvetica, 'Nimbus Sans L', 'Liberation Sans', FreeSans, sans-serif;
+      --shadow: 0 10px 30px rgba(25, 25, 25, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      background: var(--footer);
+      color: var(--gray-1);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; }
+    strong, b { font-weight: 700; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    .skip-link {
+      position: fixed;
+      top: -60px;
+      left: 1rem;
+      z-index: 100;
+      padding: 0.75rem 1rem;
+      background: var(--white);
+      color: var(--maroon);
+      font-weight: 700;
+    }
+    .skip-link:focus { top: 1rem; }
+    :focus-visible { outline: 0; box-shadow: 0 0 8px var(--blue-focus) !important; }
+
+    #deck { position: fixed; inset: 0; }
+    #progress {
+      position: fixed;
+      inset: 0 auto auto 0;
+      z-index: 60;
+      width: 0;
+      height: 4px;
+      background: var(--gold);
+      transition: width 180ms ease;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: none;
+      min-width: 0;
+      min-height: 0;
+      flex-direction: column;
+      background: var(--gray-7);
+    }
+    .slide.active { display: flex; animation: enter 260ms ease both; }
+    @keyframes enter {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .masthead {
+      flex: 0 0 auto;
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.55rem 2rem;
+      background: var(--gray-6);
+      border-bottom: 1px solid var(--gray-5);
+    }
+    .wordmark { color: var(--maroon); font-size: 0.86rem; font-weight: 700; }
+    .wordmark span { color: var(--darkgold); }
+    .section-label {
+      color: var(--gray-2);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .slide-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      padding: clamp(1.35rem, 3.5vh, 2.35rem) clamp(1.5rem, 4vw, 4rem) 1rem;
+    }
+    .kicker {
+      margin: 0 0 0.45rem;
+      color: var(--darkgold);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 {
+      max-width: 18ch;
+      margin-bottom: 0.7rem;
+      color: var(--maroon);
+      font-size: clamp(2.7rem, 6.2vw, 5.2rem);
+      line-height: 0.96;
+      letter-spacing: -0.035em;
+    }
+    h2 {
+      display: inline-block;
+      width: fit-content;
+      margin-bottom: 0.9rem;
+      padding-bottom: 0.45rem;
+      border-bottom: 5px solid var(--gold);
+      color: var(--maroon);
+      font-size: clamp(1.7rem, 3.2vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+    h3 { margin-bottom: 0.35rem; font-size: 1rem; line-height: 1.15; }
+    p { margin-bottom: 0.7rem; color: var(--gray-2); font-size: clamp(0.86rem, 1.45vw, 1.1rem); line-height: 1.38; }
+    .lead { color: var(--gray-1); font-size: clamp(1rem, 1.9vw, 1.4rem); line-height: 1.36; }
+    .muted { color: var(--gray-3); }
+    .small { font-size: 0.76rem; line-height: 1.35; }
+    .nowrap { white-space: nowrap; }
+
+    .hero {
+      background:
+        linear-gradient(105deg, var(--maroon) 0 64%, var(--darkmaroon) 64% 100%);
+      color: var(--white);
+    }
+    .hero .slide-body { justify-content: center; position: relative; overflow: hidden; }
+    .hero h1 { color: var(--white); }
+    .hero .kicker { color: var(--gold); }
+    .hero .lead { max-width: 54ch; color: var(--white); }
+    .hero .masthead { background: var(--gray-6); }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(250px, 0.7fr); gap: 2rem; align-items: center; }
+    .hero-rule { width: 6rem; height: 7px; margin: 0.25rem 0 1.1rem; background: var(--gold); }
+    .hero-orbit { width: min(36vw, 400px); justify-self: center; opacity: 0.96; }
+    .badges { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 1.1rem; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      min-height: 28px;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.025em;
+    }
+    .badge.gold { background: var(--gold); color: var(--gray-1); }
+    .badge.maroon { background: var(--maroon); color: var(--white); }
+    .badge.dark { background: var(--footer); color: var(--white); }
+    .badge.info { background: var(--info-bg); color: var(--blue-dark); }
+    .badge.success { background: var(--success-bg); color: var(--green-dark); }
+    .badge.warning { background: var(--warning-bg); color: var(--orange-dark); }
+    .badge.outline { border: 1px solid rgba(255,255,255,0.62); color: var(--white); }
+
+    .content-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(1.2rem, 3vw, 2.6rem); align-items: center; flex: 1 1 auto; min-height: 0; }
+    .content-grid.wide-viz { grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr); }
+    .content-grid.equal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .cards { display: grid; gap: 0.75rem; }
+    .cards.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cards.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card {
+      min-width: 0;
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--gray-5);
+      border-left: 6px solid var(--maroon);
+      border-radius: 5px;
+      background: var(--white);
+      box-shadow: 0 4px 15px rgba(25,25,25,0.05);
+    }
+    .card.gold { border-left-color: var(--gold); }
+    .card.blue { border-left-color: var(--blue); }
+    .card.green { border-left-color: var(--green); }
+    .card.orange { border-left-color: var(--orange); }
+    .card.error { border-left-color: var(--error); }
+    .card p { margin: 0; font-size: 0.8rem; }
+    .card .eyebrow { margin-bottom: 0.35rem; color: var(--gray-3); font-size: 0.65rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.65rem; }
+    .stat {
+      min-width: 0;
+      padding: 0.72rem 0.8rem;
+      border-top: 5px solid var(--gold);
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+    .stat .number { display: block; color: var(--maroon); font-size: clamp(1.45rem, 3vw, 2.6rem); font-weight: 700; line-height: 1; }
+    .stat .label { display: block; margin-top: 0.28rem; color: var(--gray-2); font-size: 0.7rem; line-height: 1.2; }
+
+    .artifact-map { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; margin-top: 0.55rem; }
+    .artifact {
+      min-height: 210px;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      border: 1px solid var(--gray-5);
+      border-top: 7px solid var(--maroon);
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+    .artifact.prototype { border-top-color: var(--gold); }
+    .artifact.implemented { border-top-color: var(--green); }
+    .artifact .status { margin-bottom: 0.75rem; }
+    .artifact ul { margin: 0; padding-left: 1.1rem; color: var(--gray-2); font-size: 0.78rem; line-height: 1.45; }
+    .artifact .bottom { margin-top: auto; padding-top: 0.7rem; border-top: 1px solid var(--gray-6); color: var(--gray-3); font-size: 0.68rem; }
+
+    .viz-panel {
+      min-width: 0;
+      padding: 0.8rem;
+      border: 1px solid var(--gray-5);
+      border-radius: 6px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+    .viz-panel svg { display: block; width: 100%; height: auto; max-height: 52vh; }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(92px, 1fr));
+      gap: 0.45rem;
+      align-items: stretch;
+      margin-top: 0.45rem;
+    }
+    .arch-node {
+      position: relative;
+      min-height: 105px;
+      padding: 0.7rem;
+      border: 1px solid var(--gray-5);
+      border-top: 5px solid var(--maroon);
+      background: var(--white);
+    }
+    .arch-node.gold { border-top-color: var(--gold); }
+    .arch-node.blue { border-top-color: var(--blue); }
+    .arch-node.green { border-top-color: var(--green); }
+    .arch-node.orange { border-top-color: var(--orange); }
+    .arch-node::after {
+      content: "→";
+      position: absolute;
+      top: 42%;
+      right: -0.54rem;
+      z-index: 2;
+      color: var(--gray-3);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .arch-node:last-child::after { content: ""; }
+    .arch-node .step { color: var(--darkgold); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; }
+    .arch-node h3 { margin-top: 0.25rem; font-size: 0.84rem; }
+    .arch-node p { margin: 0; font-size: 0.67rem; line-height: 1.3; }
+    .callouts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.65rem; margin-top: 0.75rem; }
+    .callout { padding: 0.68rem 0.75rem; border-radius: 4px; font-size: 0.72rem; line-height: 1.3; }
+    .callout.info { background: var(--info-bg); color: var(--gray-1); }
+    .callout.warning { background: var(--warning-bg); color: var(--gray-1); }
+    .callout.success { background: var(--success-bg); color: var(--gray-1); }
+
+    .loop {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(80px, 1fr));
+      gap: 0.45rem;
+      align-items: center;
+      margin: 0.65rem 0 0.8rem;
+    }
+    .loop-node {
+      position: relative;
+      min-height: 96px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0.65rem;
+      border: 1px solid var(--gray-5);
+      border-radius: 5px;
+      background: var(--white);
+      text-align: center;
+    }
+    .loop-node::after { content: "→"; position: absolute; right: -0.55rem; color: var(--gray-3); font-weight: 700; }
+    .loop-node:last-child::after { content: ""; }
+    .loop-node.orchestrator { border: 3px solid var(--maroon); }
+    .loop-node.validator { border: 3px solid var(--blue); background: var(--info-bg); }
+    .loop-node.human { border: 3px solid var(--green); background: var(--success-bg); }
+    .loop-node h3 { margin: 0 0 0.2rem; font-size: 0.78rem; }
+    .loop-node p { margin: 0; font-size: 0.63rem; line-height: 1.22; }
+    .failure-loop {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.55rem;
+      margin: 0 auto;
+      padding: 0.55rem 0.9rem;
+      border: 2px dashed var(--error);
+      border-radius: 999px;
+      background: var(--error-bg);
+      color: var(--gray-1);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    .matrix-col { min-width: 0; }
+    .matrix-title {
+      margin-bottom: 0.55rem;
+      padding: 0.45rem 0.65rem;
+      color: var(--white);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .matrix-title.worked { background: var(--green-dark); }
+    .matrix-title.failed { background: var(--error); }
+    .matrix .card { margin-bottom: 0.55rem; min-height: 78px; }
+
+    .capability {
+      display: grid;
+      grid-template-columns: minmax(130px, 1.3fr) repeat(3, minmax(70px, 0.7fr));
+      border: 1px solid var(--gray-5);
+      background: var(--white);
+    }
+    .capability > div { padding: 0.48rem 0.55rem; border-right: 1px solid var(--gray-6); border-bottom: 1px solid var(--gray-6); font-size: 0.68rem; }
+    .capability > div:nth-child(4n) { border-right: 0; }
+    .capability .head { background: var(--gray-6); color: var(--gray-1); font-weight: 700; }
+    .capability .yes { color: var(--green-dark); font-weight: 700; text-align: center; }
+    .capability .limit { color: var(--orange-dark); font-weight: 700; text-align: center; }
+
+    .lesson-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+    .lesson {
+      display: grid;
+      grid-template-columns: 0.9fr auto 1.1fr;
+      gap: 0.55rem;
+      align-items: center;
+      padding: 0.7rem;
+      border: 1px solid var(--gray-5);
+      background: var(--white);
+    }
+    .lesson .problem, .lesson .change { font-size: 0.72rem; line-height: 1.28; }
+    .lesson .problem { color: var(--gray-2); }
+    .lesson .change { color: var(--gray-1); font-weight: 700; }
+    .lesson .arrow { color: var(--maroon); font-size: 1.2rem; font-weight: 700; }
+    .next-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.65rem; margin-top: 0.8rem; }
+    .next-step { padding: 0.7rem 0.8rem; border-top: 5px solid var(--gold); background: var(--footer); color: var(--white); }
+    .next-step .n { color: var(--gold); font-size: 0.68rem; font-weight: 700; }
+    .next-step p { margin: 0.2rem 0 0; color: var(--white); font-size: 0.72rem; }
+
+    .source {
+      margin-top: auto;
+      padding-top: 0.55rem;
+      color: var(--gray-3);
+      font-size: 0.62rem;
+      line-height: 1.25;
+    }
+    .source code { color: var(--gray-2); font-size: 0.61rem; }
+
+    .footer {
+      flex: 0 0 auto;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.4rem 1.2rem;
+      border-top: 1px solid var(--footer-divider);
+      background: var(--footer);
+      color: var(--gray-6);
+    }
+    .footer-title { color: var(--gray-4); font-size: 0.66rem; }
+    .footer-nav { display: flex; align-items: center; gap: 0.55rem; }
+    .count { min-width: 3.4rem; color: var(--gray-5); font-size: 0.7rem; text-align: center; font-variant-numeric: tabular-nums; }
+    .nav-button {
+      width: 32px;
+      height: 28px;
+      border: 1px solid var(--footer-divider);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--gray-6);
+      cursor: pointer;
+    }
+    .nav-button:hover { border-color: var(--gold); color: var(--gold); }
+    .nav-button:disabled { cursor: not-allowed; opacity: 0.35; }
+
+    .hint {
+      position: fixed;
+      right: 1rem;
+      bottom: 3.1rem;
+      z-index: 55;
+      padding: 0.38rem 0.6rem;
+      border: 1px solid var(--footer-divider);
+      border-radius: 4px;
+      background: rgba(30, 30, 30, 0.94);
+      color: var(--gray-5);
+      font-size: 0.65rem;
+      transition: opacity 300ms ease;
+    }
+    kbd { padding: 0.08rem 0.28rem; border-radius: 3px; background: var(--footer-divider); color: var(--white); font-family: var(--font); }
+    .sr-only {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    @media (max-width: 980px) {
+      .slide-body { padding: 1.15rem 1.4rem 0.7rem; }
+      .hero-grid, .content-grid, .content-grid.wide-viz, .content-grid.equal { grid-template-columns: 1fr; align-items: start; }
+      .hero-orbit { display: none; }
+      .cards.four, .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .architecture { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .arch-node:nth-child(3)::after { content: ""; }
+      .loop { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .loop-node:nth-child(4)::after { content: ""; }
+      .artifact-map { grid-template-columns: 1fr; }
+      .artifact { min-height: 0; }
+    }
+
+    @media (max-width: 680px) {
+      .masthead { padding: 0.45rem 0.85rem; }
+      .section-label { display: none; }
+      .cards.three, .cards.four, .stats, .callouts, .matrix, .lesson-grid, .next-strip { grid-template-columns: 1fr; }
+      .architecture, .loop { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .arch-node:nth-child(2n)::after, .loop-node:nth-child(2n)::after { content: ""; }
+      .lesson { grid-template-columns: 1fr; }
+      .lesson .arrow { transform: rotate(90deg); }
+      .footer-title { display: none; }
+      .footer { justify-content: flex-end; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+
+    @media print {
+      html, body { height: auto; overflow: visible; background: var(--white); }
+      #deck { position: static; }
+      #progress, .hint, .footer { display: none !important; }
+      .slide, .slide.active {
+        position: relative;
+        display: flex !important;
+        width: 13.333in;
+        height: 7.5in;
+        break-after: page;
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#deck">Skip to presentation</a>
+  <div id="progress" aria-hidden="true"></div>
+  <main id="deck" tabindex="-1" aria-label="AIRgents of Change presentation">
+
+    <!-- Slide 1: title and thesis -->
+    <section class="slide hero active" id="slide-1" aria-labelledby="slide-1-title">
+      <header class="masthead">
+        <span class="wordmark">Arizona State University <span>· Research Technology Office</span></span>
+        <span class="section-label">AIR Spark Challenge 2026</span>
+      </header>
+      <div class="slide-body">
+        <div class="hero-grid">
+          <div>
+            <p class="kicker">A 48-hour research and delivery experiment</p>
+            <h1 id="slide-1-title">AIRgents of Change</h1>
+            <div class="hero-rule" aria-hidden="true"></div>
+            <p class="lead">A configurable society of Large Language Model (LLM) Agents for studying consensus under unequal information—and a live test of an Agentic Software Development Lifecycle (ASDLC).</p>
+            <div class="badges" aria-label="Project status">
+              <span class="badge gold">Prototype</span>
+              <span class="badge outline">Research exploration</span>
+              <span class="badge outline">Not published findings</span>
+            </div>
+          </div>
+          <svg class="hero-orbit" viewBox="0 0 420 420" aria-hidden="true">
+            <g fill="none" stroke="var(--gold)" stroke-width="3">
+              <circle cx="210" cy="210" r="65" opacity="0.6"/>
+              <circle cx="210" cy="210" r="142" opacity="0.35" stroke-dasharray="8 10"/>
+              <path d="M210 68 333 139 333 281 210 352 87 281 87 139Z" opacity="0.55"/>
+            </g>
+            <g fill="var(--white)" stroke="var(--gold)" stroke-width="5">
+              <circle cx="210" cy="68" r="24"/><circle cx="333" cy="139" r="24"/><circle cx="333" cy="281" r="24"/>
+              <circle cx="210" cy="352" r="24"/><circle cx="87" cy="281" r="24"/><circle cx="87" cy="139" r="24"/>
+            </g>
+            <circle cx="210" cy="210" r="40" fill="var(--gold)"/>
+            <text x="210" y="216" text-anchor="middle" font-size="19" font-weight="700" fill="var(--gray-1)">RUN</text>
+          </svg>
+        </div>
+        <p class="source">Sources: <code>README.md</code> · <code>CONTEXT.md</code> · <code>docs/adr/0001-scope-and-anchor-scenario.md</code></p>
+      </div>
+      <footer class="footer"></footer>
+    </section>
+
+    <!-- Slide 2: Jury Scenario -->
+    <section class="slide" id="slide-2" aria-labelledby="slide-2-title">
+      <header class="masthead">
+        <span class="wordmark">Arizona State University <span>· Research Technology Office</span></span>
+        <span class="section-label">The problem, made concrete</span>
+      </header>
+      <div class="slide-body">
+        <p class="kicker">Jury Scenario · consensus under unequal information</p>
+        <h2 id="slide-2-title">Can a networked jury reach a verdict?</h2>
+        <div class="content-grid wide-viz">
+          <div>
+            <p class="lead">Each juror updates a <strong>Stance</strong> toward Guilty or Not Guilty using evidence, confidence, Social Values, and only the neighbors they can observe.</p>
+            <div class="stats" style="grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:0.85rem">
+              <div class="stat"><span class="number">6</span><span class="label">juror Agents in a ring</span></div>
+              <div class="stat"><span class="number">4</span><span class="label">attorney Agents</span></div>
+              <div class="stat"><span class="number">20</span><span class="label">prototype evidence items</span></div>
+              <div class="stat"><span class="number">0–1</span><span class="label">confidence scale</span></div>
+            </div>
+            <div class="callout info" style="margin-top:0.7rem"><strong>Social Values:</strong> the prototype stores categories as A/B; team examples include Violent Crimes and Mercy of the People.</div>
+          </div>
+          <div class="viz-panel">
+            <svg viewBox="0 0 720 430" role="img" aria-label="Six juror Agents connected in a ring. Defense and Prosecution attorney Agents send evidence to all jurors, while jurors communicate only with adjacent neighbors.">
+              <defs>
+                <marker id="arrow-maroon" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 8 4 0 8Z" fill="var(--maroon)"/></marker>
+              </defs>
+              <g stroke="var(--gray-4)" stroke-width="4" fill="none">
+                <path d="M360 74 470 137 470 263 360 326 250 263 250 137Z"/>
+              </g>
+              <g fill="var(--white)" stroke="var(--blue)" stroke-width="5" text-anchor="middle" font-weight="700">
+                <circle cx="360" cy="74" r="31"/><circle cx="470" cy="137" r="31"/><circle cx="470" cy="263" r="31"/>
+                <circle cx="360" cy="326" r="31"/><circle cx="250" cy="263" r="31"/><circle cx="250" cy="137" r="31"/>
+              </g>
+              <g fill="var(--gray-1)" text-anchor="middle" font-size="15" font-weight="700">
+                <text x="360" y="79">J1</text><text x="470" y="142">J2</text><text x="470" y="268">J3</text>
+                <text x="360" y="331">J4</text><text x="250" y="268">J5</text><text x="250" y="142">J6</text>
+              </g>
+              <g>
+                <rect x="18" y="136" width="145" height="128" rx="7" fill="var(--info-bg)" stroke="var(--blue)" stroke-width="3"/>
+                <text x="90" y="162" text-anchor="middle" font-size="14" font-weight="700" fill="var(--blue-dark)">DEFENSE</text>
+                <circle cx="62" cy="202" r="22" fill="var(--white)" stroke="var(--blue)" stroke-width="3"/>
+                <circle cx="119" cy="202" r="22" fill="var(--white)" stroke="var(--blue)" stroke-width="3"/>
+                <text x="62" y="207" text-anchor="middle" font-size="12">D1</text><text x="119" y="207" text-anchor="middle" font-size="12">D2</text>
+                <text x="90" y="245" text-anchor="middle" font-size="11" fill="var(--gray-2)">Acquit → 0</text>
+              </g>
+              <g>
+                <rect x="557" y="136" width="145" height="128" rx="7" fill="var(--warning-bg)" stroke="var(--orange)" stroke-width="3"/>
+                <text x="629" y="162" text-anchor="middle" font-size="14" font-weight="700" fill="var(--orange-dark)">PROSECUTION</text>
+                <circle cx="601" cy="202" r="22" fill="var(--white)" stroke="var(--orange)" stroke-width="3"/>
+                <circle cx="658" cy="202" r="22" fill="var(--white)" stroke="var(--orange)" stroke-width="3"/>
+                <text x="601" y="207" text-anchor="middle" font-size="12">P1</text><text x="658" y="207" text-anchor="middle" font-size="12">P2</text>
+                <text x="629" y="245" text-anchor="middle" font-size="11" fill="var(--gray-2)">Convict → 1</text>
+              </g>
+              <path d="M166 200 C195 200 207 200 222 200" fill="none" stroke="var(--maroon)" stroke-width="4" stroke-dasharray="8 6" marker-end="url(#arrow-maroon)"/>
+              <path d="M554 200 C525 200 513 200 498 200" fill="none" stroke="var(--maroon)" stroke-width="4" stroke-dasharray="8 6" marker-end="url(#arrow-maroon)"/>
+              <text x="360" y="207" text-anchor="middle" font-size="13" font-weight="700" fill="var(--maroon)">Evidence → all jurors</text>
+              <g transform="translate(182 385)">
+                <line x1="0" y1="0" x2="40" y2="0" stroke="var(--gray-4)" stroke-width="4"/>
+                <text x="48" y="5" font-size="11" fill="var(--gray-2)">neighbor visibility</text>
+                <line x1="190" y1="0" x2="230" y2="0" stroke="var(--maroon)" stroke-width="4" stroke-dasharray="8 6"/>
+                <text x="238" y="5" font-size="11" fill="var(--gray-2)">directed evidence</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <p class="source">Sources: Jury Scenario in <code>docs/planning/scenario-experiment-design.md</code> on the project mainline · canonical terms from <code>CONTEXT.md</code>. Social Value examples are team-provided presentation terminology.</p>
+      </div>
+      <footer class="footer"></footer>
+    </section>
+
+    <!-- Slide 3: built artifacts -->
+    <section class="slide" id="slide-3" aria-labelledby="slide-3-title">
+      <header class="masthead">
+        <span class="wordmark">Arizona State University <span>· Research Technology Office</span></span>
+        <span class="section-label">What we built</span>
+      </header>
+      <div class="slide-body">
+        <p class="kicker">Honest artifact inventory</p>
+        <h2 id="slide-3-title">Designed, prototyped, and implemented—not yet integrated</h2>
+        <div class="artifact-map">
+          <article class="artifact">
+            <div class="status"><span class="badge maroon">Designed</span></div>
+            <h3>Research framework</h3>
+            <ul>
+              <li>Canonical domain glossary</li>
+              <li>Five Architecture Decision Records (ADRs)</li>
+              <li>48 user stories</li>
+              <li>Configure → Run → observe → export specification</li>
+            </ul>
+            <div class="bottom">Framework-shaped seams; deliberately constrained build.</div>
+          </article>
+          <article class="artifact prototype">
+            <div class="status"><span class="badge warning">Prototyped</span></div>
+            <h3>Interactive research interface</h3>
+            <ul>
+              <li>Experiment design screen</li>
+              <li>Network and Stance visualizations</li>
+              <li>Round playback</li>
+              <li>JavaScript Object Notation (JSON) and comma-separated values (CSV) export mock</li>
+            </ul>
+            <div class="bottom">Mock simulation demonstrates the workflow—not research data.</div>
+          </article>
+          <article class="artifact implemented">
+            <div class="status"><span class="badge success">Implemented</span></div>
+            <h3>Test-first backend foundation</h3>
+            <ul>
+              <li>FastAPI application scaffold</li>
+              <li>Consistent Application Programming Interface (API) envelope</li>
+              <li>Boundary validation handling</li>
+              <li>Server-side provider-secret configuration</li>
+            </ul>
+            <div class="bottom">Implemented on an archived feature branch; not a complete Run engine.</div>
+          </article>
+        </div>
+        <div class="stats" style="margin-top:0.8rem">
+          <div class="stat"><span class="number">5</span><span class="label">accepted ADRs</span></div>
+          <div class="stat"><span class="number">48</span><span class="label">documented user stories</span></div>
+          <div class="stat"><span class="number">3</span><span class="label">prototype workflow screens</span></div>
+          <div class="stat"><span class="number">0</span><span class="label">published research claims</span></div>
+        </div>
+        <p class="source">Sources: <code>CONTEXT.md</code> · <code>docs/adr/0001–0005</code> · <code>docs/planning/spec-airgents-of-change-prototype.md</code> · historical prototype and backend feature branches.</p>
+      </div>
+      <footer class="footer"></footer>
+    </section>
+
+    <!-- Slide 4: architecture -->
+    <section class="slide" id="slide-4" aria-labelledby="slide-4-title">
+      <header class="masthead">
+        <span class="wordmark">Arizona State University <span>· Research Technology Office</span></span>
+        <span class="section-label">Multi-agent architecture</span>
+      </header>
+      <div class="slide-body">
+        <p class="kicker">One observable, rate-limited control loop</p>
+        <h2 id="slide-4-title">From Experiment design to a reproducible Dataset</h2>
+        <div class="architecture" role="img" aria-label="Architecture flow from Experiment through asynchronous execution, shared provider queue, Agent Rounds, Dataset, and deterministic Run Orchestrator.">
+          <div class="arch-node"><span class="step">01 · DESIGN</span><h3>Experiment</h3><p>Roles × Personas × Network × Context Shells × proposition</p></div>
+          <div class="arch-node blue"><span class="step">02 · START</span><h3>RunExecutor</h3><p>Asynchronous background execution; API returns immediately</p></div>
+          <div class="arch-node orange"><span class="step">03 · PROTECT</span><h3>Provider queue</h3><p>One shared throttle; bounded concurrency and retry backoff</p></div>
+          <div class="arch-node gold"><span class="step">04 · REASON</span><h3>Agent Rounds</h3><p>Observe permitted inputs, communicate, update Stance</p></div>
+          <div class="arch-node green"><span class="step">05 · RECORD</span><h3>Dataset</h3><p>Append-only Round Records are the source of truth</p></div>
+          <div class="arch-node"><span class="step">06 · STOP</span><h3>Run Orchestrator</h3><p>Deterministic: Convergence or maximum Rounds</p></div>
+        </div>
+        <div class="callouts">
+          <div class="callout info"><strong>Live observation:</strong> Server-Sent Events (SSE) stream Round Records; polling is the fallback.</div>
+          <div class="callout warning"><strong>Latency and queuing:</strong> one global token bucket handles unpublished limits and Hypertext Transfer Protocol (HTTP) 429 responses with jittered backoff.</div>
+          <div class="callout success"><strong>Security:</strong> provider credentials remain server-side; schemas validate external input; the hackathon prototype is local-only.</div>
+        </div>
+        <div class="stats" style="margin-top:0.75rem">
+          <div class="stat"><span class="number">10</span><span class="label">Agent prototype target</span></div>
+          <div class="stat"><span class="number">50+</span><span class="label">future scale target</span></div>
+          <div class="stat"><span class="number">1</span><span class="label">shared provider throttle</span></div>
+          <div class="stat"><span class="number">N−1</span><span class="label">prior-Round observation</span></div>
+        </div>
+        <p class="source">Sources: <code>docs/adr/0002-simulation-engine-discrete-rounds.md</code> · <code>0003-async-run-execution-and-observation.md</code> · <code>0004-shared-provider-throttle.md</code> · <code>0005-markdown-at-llm-boundary.md</code></p>
+      </div>
+      <footer class="footer"></footer>
+    </section>
+
+    <!-- Slide 5: development validation loop -->
+    <section class="slide" id="slide-5" aria-labelledby="slide-5-title">
+      <header class="masthead">
+        <span class="wordmark">Arizona State University <span>· Research Technology Office</span></span>
+        <span class="section-label">Before human review</span>
+      </header>
+      <div class="slide-body">
+        <p class="kicker">ASDLC quality and accountability loop</p>
+        <h2 id="slide-5-title">Nothing reaches a human unchecked</h2>
+        <div class="loop" role="img" aria-label="Development Orchestrator assigns a claimed ticket to a worker. The worker uses test-driven development. A Validator checks tests, specification, standards, and security. Failed work is resubmitted or reassigned and validated again. Passed work reaches continuous integration and then human review.">
+          <div class="loop-node"><h3>Ticket queue</h3><p>Claim first; dependencies visible</p></div>
+          <div class="loop-node orchestrator"><h3>Development Orchestrator</h3><p>Assigns one small slice</p></div>
+          <div class="loop-node"><h3>Worker Agent</h3><p>One branch; test-driven development (TDD)</p></div>
+          <div class="loop-node validator"><h3>Validator</h3><p>Tests + Spec + standards + security</p></div>
+          <div class="loop-node"><h3>Continuous integration (CI)</h3><p>Tests, lint, and type checks</p></div>
+          <div class="loop-node"><h3>Pull request (PR)</h3><p>Evidence and traceability</p></div>
+          <div class="loop-node human"><h3>Human reviewer</h3><p>Judgment and approval</p></div>
+        </div>
+        <div class="failure-loop" aria-label="Failure loop"><span aria-hidden="true">↶</span> Validator fails work → resubmit or reassign → implement → validate again</div>
+        <div class="callouts" style="margin-top:0.75rem">
+          <div class="callout info"><strong>Two different controls:</strong> this development Orchestrator/Validator loop governs work quality; the <strong>Run Orchestrator</strong> on slide 4 only decides when a simulation Run ends.</div>
+          <div class="callout success"><strong>Human stays accountable:</strong> automated gates happen first, but one independent human approval is still required.</div>
+          <div class="callout warning"><strong>Security gate:</strong> required when a slice touches secrets, authentication, input boundaries, permissions, or data.</div>
+        </div>
+        <div class="stats" style="margin-top:0.75rem">
+          <div class="stat"><span class="number">≤300</span><span class="label">changed lines per slice</span></div>
+          <div class="stat"><span class="number">1</span><span class="label">ticket · branch · PR</span></div>
+          <div class="stat"><span class="number">2</span><span class="label">review axes: Standards + Spec</span></div>
+          <div class="stat"><span class="number">1</span><span class="label">human approval required</span></div>
+        </div>
+        <p class="source">Repo-supported gates: <code>docs/planning/agent-sdlc-workflow.md</code> · repository skills for implementation, Git workflow, code review, and security review. Automated Orchestrator assignment and reassignment are team-reported workflow behavior.</p>
+      </div>
+      <footer class="footer"></footer>
+    </section>
+
+    <!-- Slide 6: what worked and failed -->
+    <section class="slide" id="slide-6" aria-labelledby="slide-6-title">
+      <header class="masthead">
+        <span class="wordmark">Arizona State University <span>· Research Technology Office</span></span>
+        <span class="section-label">What worked—and what failed</span>
+      </header>
+      <div class="slide-body">
+        <p class="kicker">Candid hackathon evidence</p>
+        <h2 id="slide-6-title">The architecture held; time and orchestration did not</h2>
+        <div class="content-grid equal">
+          <div class="matrix">
+            <div class="matrix-col">
+              <div class="matrix-title worked">Worked</div>
+              <div class="card green"><h3>Specification before implementation</h3><p>Glossary and ADRs prevented Role, Persona, Network, and Context Shell concepts from drifting.</p></div>
+              <div class="card green"><h3>Small, test-first foundations</h3><p>Atomic red → green commits created inspectable API, validation, and secret-handling behavior.</p></div>
+              <div class="card green"><h3>Defensive model boundary</h3><p>Labeled Markdown, one repair retry, and carry-forward keep malformed output from ending a Run.</p></div>
+            </div>
+            <div class="matrix-col">
+              <div class="matrix-title failed">Blocked or failed</div>
+              <div class="card error"><h3>Full Run not completed</h3><p>Available capable Models were too slow for the remaining hackathon window.</p></div>
+              <div class="card error"><h3>Wrong work, confidently delivered</h3><p>A frontend ticket reportedly produced backend work after orchestration drifted from the requested branch and scope.</p></div>
+              <div class="card error"><h3>Shared-tree collision</h3><p>Parallel workflows in one working tree interfered with each other.</p></div>
+            </div>
+          </div>
+          <div>
+            <div class="viz-panel">
+              <p class="kicker" style="margin-bottom:0.6rem">Orchestration Model fit · qualitative</p>
+              <div class="capability" role="table" aria-label="Qualitative model capability and latency observations">
+                <div class="head" role="columnheader">Need / observation</div><div class="head" role="columnheader">Vision</div><div class="head" role="columnheader">Reasoning</div><div class="head" role="columnheader">Latency</div>
+                <div role="cell">Orchestration requirement</div><div class="yes" role="cell">Required</div><div class="yes" role="cell">Required</div><div class="limit" role="cell">Limited choices</div>
+                <div role="cell">Qwen 3 (27B)</div><div class="muted" role="cell">—</div><div class="yes" role="cell">Strong</div><div class="limit" role="cell">Very slow</div>
+                <div role="cell">Qwen 3 Vision-Language (VL) 32B Thinking</div><div class="yes" role="cell">Yes</div><div class="yes" role="cell">Yes</div><div class="limit" role="cell">Scope drift</div>
+              </div>
+              <div class="callout warning" style="margin-top:0.7rem"><strong>Interpretation:</strong> no throughput or outcome statistics were captured. These are team observations, not a benchmark.</div>
+            </div>
+            <div class="card gold" style="margin-top:0.7rem">
+              <h3>What the incomplete Run means</h3>
+              <p><strong>Hackathon time + model latency constrained execution.</strong> It does not establish that the research approach failed.</p>
+            </div>
+          </div>
+        </div>
+        <p class="source">Architecture lessons: <code>docs/adr/0001–0005</code>. Model behavior, orchestration failure, and collision details are team-reported observations; identifiers are presented as reported and remain unbenchmarked.</p>
+      </div>
+      <footer class="footer"></footer>
+    </section>
+
+    <!-- Slide 7: lessons and next -->
+    <section class="slide" id="slide-7" aria-labelledby="slide-7-title">
+      <header class="masthead">
+        <span class="wordmark">Arizona State University <span>· Research Technology Office</span></span>
+        <span class="section-label">Lessons and next experiment</span>
+      </header>
+      <div class="slide-body">
+        <p class="kicker">Turn each failure into a control</p>
+        <h2 id="slide-7-title">Isolate · verify · measure · narrow</h2>
+        <div class="lesson-grid">
+          <div class="lesson"><div class="problem"><strong>Collision:</strong> parallel workers changed one tree.</div><div class="arrow" aria-hidden="true">→</div><div class="change">One isolated clone or worktree per Agent thread.</div></div>
+          <div class="lesson"><div class="problem"><strong>Scope drift:</strong> work ran but did not match the ticket.</div><div class="arrow" aria-hidden="true">→</div><div class="change">Validator checks ticket, branch, and changed files—not only tests.</div></div>
+          <div class="lesson"><div class="problem"><strong>Latency:</strong> capable Models consumed the demo window.</div><div class="arrow" aria-hidden="true">→</div><div class="change">Benchmark vision + reasoning + response time before orchestration.</div></div>
+          <div class="lesson"><div class="problem"><strong>Scope:</strong> framework ambition exceeded 48 hours.</div><div class="arrow" aria-hidden="true">→</div><div class="change">Design the framework; build one tracer-bullet Run first.</div></div>
+        </div>
+        <div class="next-strip" aria-label="Next steps">
+          <div class="next-step"><span class="n">NEXT 01</span><p>Integrate configure → Run → observe → export with the Jury Scenario.</p></div>
+          <div class="next-step"><span class="n">NEXT 02</span><p>Add durable workers plus latency, retry, and queue-depth observability.</p></div>
+          <div class="next-step"><span class="n">NEXT 03</span><p>Run repeated, instrumented Experiments before making research claims.</p></div>
+        </div>
+        <div class="content-grid equal" style="margin-top:0.85rem; align-items:end">
+          <div>
+            <p class="lead" style="margin:0"><strong>The application is the challenge deliverable.</strong><br>The process is also an experiment.</p>
+          </div>
+          <div class="callout info"><strong>Research posture:</strong> this prototype shows a credible method and records delivery evidence. It does not publish a verdict, treatment effect, or scientific conclusion.</div>
+        </div>
+        <p class="source">Sources: <code>README.md</code> · <code>docs/adr/0001-scope-and-anchor-scenario.md</code> · <code>docs/planning/spec-airgents-of-change-prototype.md</code> · team-reported hackathon lessons.</p>
+      </div>
+      <footer class="footer"></footer>
+    </section>
+  </main>
+
+  <div class="hint" id="hint" aria-hidden="true">Navigate <kbd>←</kbd> <kbd>→</kbd> · Fullscreen <kbd>F</kbd></div>
+  <div class="sr-only" id="announcement" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const progress = document.getElementById("progress");
+      const announcement = document.getElementById("announcement");
+      const hint = document.getElementById("hint");
+      const SWIPE_THRESHOLD_PX = 60;
+      const HINT_DURATION_MS = 4500;
+      let index = 0;
+      let touchStartPoint = null;
+
+      slides.forEach((slide) => {
+        const footer = slide.querySelector(".footer");
+        const title = document.createElement("span");
+        title.className = "footer-title";
+        title.textContent = "AIRgents of Change · ASU AIR Spark Challenge 2026";
+
+        const nav = document.createElement("div");
+        nav.className = "footer-nav";
+
+        const previous = document.createElement("button");
+        previous.type = "button";
+        previous.className = "nav-button previous";
+        previous.setAttribute("aria-label", "Previous slide");
+        previous.textContent = "←";
+
+        const count = document.createElement("span");
+        count.className = "count";
+
+        const next = document.createElement("button");
+        next.type = "button";
+        next.className = "nav-button next";
+        next.setAttribute("aria-label", "Next slide");
+        next.textContent = "→";
+
+        nav.append(previous, count, next);
+        footer.append(title, nav);
+      });
+
+      function render() {
+        slides.forEach((slide, slideIndex) => {
+          const isActive = slideIndex === index;
+          slide.classList.toggle("active", isActive);
+          slide.setAttribute("aria-hidden", String(!isActive));
+        });
+
+        document.querySelectorAll(".count").forEach((count) => {
+          count.textContent = `${index + 1} / ${slides.length}`;
+        });
+        document.querySelectorAll(".previous").forEach((button) => {
+          button.disabled = index === 0;
+        });
+        document.querySelectorAll(".next").forEach((button) => {
+          button.disabled = index === slides.length - 1;
+        });
+
+        progress.style.width = `${slides.length > 1 ? (index / (slides.length - 1)) * 100 : 100}%`;
+        const heading = slides[index].querySelector("h1, h2");
+        announcement.textContent = `Slide ${index + 1} of ${slides.length}: ${heading ? heading.textContent : ""}`;
+        history.replaceState(null, "", `#slide-${index + 1}`);
+      }
+
+      function go(target) {
+        index = Math.max(0, Math.min(slides.length - 1, target));
+        render();
+      }
+
+      function toggleFullscreen() {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(function () {});
+        } else if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(function () {});
+        }
+      }
+
+      document.addEventListener("keydown", function (event) {
+        if (["ArrowRight", "PageDown", " "].includes(event.key)) {
+          event.preventDefault();
+          go(index + 1);
+        } else if (["ArrowLeft", "PageUp"].includes(event.key)) {
+          event.preventDefault();
+          go(index - 1);
+        } else if (event.key === "Home") {
+          event.preventDefault();
+          go(0);
+        } else if (event.key === "End") {
+          event.preventDefault();
+          go(slides.length - 1);
+        } else if (event.key.toLowerCase() === "f" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          toggleFullscreen();
+        }
+      });
+
+      document.addEventListener("click", function (event) {
+        if (event.target.closest(".next")) go(index + 1);
+        if (event.target.closest(".previous")) go(index - 1);
+      });
+
+      document.addEventListener("touchstart", function (event) {
+        const touch = event.changedTouches[0];
+        touchStartPoint = { x: touch.screenX, y: touch.screenY };
+      }, { passive: true });
+
+      document.addEventListener("touchend", function (event) {
+        if (touchStartPoint === null) return;
+        const touch = event.changedTouches[0];
+        const deltaX = touch.screenX - touchStartPoint.x;
+        const deltaY = touch.screenY - touchStartPoint.y;
+        if (Math.abs(deltaX) > SWIPE_THRESHOLD_PX && Math.abs(deltaX) > Math.abs(deltaY)) {
+          go(index + (deltaX < 0 ? 1 : -1));
+        }
+        touchStartPoint = null;
+      }, { passive: true });
+
+      function slideIndexFromHash() {
+        const match = /^#slide-(\d+)$/.exec(window.location.hash);
+        if (!match) return null;
+        const requestedIndex = Number.parseInt(match[1], 10) - 1;
+        return Math.max(0, Math.min(slides.length - 1, requestedIndex));
+      }
+
+      const requestedIndex = slideIndexFromHash();
+      if (requestedIndex !== null) index = requestedIndex;
+      window.addEventListener("hashchange", function () {
+        const hashIndex = slideIndexFromHash();
+        if (hashIndex !== null) go(hashIndex);
+      });
+      render();
+      if (hint) window.setTimeout(function () { hint.style.opacity = "0"; }, HINT_DURATION_MS);
+    }());
+  </script>
+</body>
+</html>
