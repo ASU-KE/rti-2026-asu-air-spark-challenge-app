@@ -11,6 +11,9 @@ permissions:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,9 +32,6 @@ jobs:
               - 'package.json'
               - 'bun.lock'
               - 'tsconfig*.json'
-      outputs:
-        backend: ${{ steps.filter.outputs.backend }}
-        frontend: ${{ steps.filter.outputs.frontend }}
 
   backend-tests:
     name: Backend (pytest)
@@ -58,6 +58,9 @@ jobs:
       - name: Install dependencies
         if: steps.guard.outputs.run == 'true'
         run: uv sync
+      - name: Typecheck
+        if: steps.guard.outputs.run == 'true'
+        run: uv run mypy
       - name: Run tests
         if: steps.guard.outputs.run == 'true'
         run: uv run pytest -x -q
